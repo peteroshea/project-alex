@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Alex — Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060912;
+  --bg2:       #0d1427;
+  --bg3:       #111e36;
+  --blue:      #3b82f6;
+  --blue-dim:  rgba(59,130,246,0.15);
+  --purple:    #8b5cf6;
+  --purple-dim:rgba(139,92,246,0.12);
+  --orange:    #f59e0b;
+  --orange-dim:rgba(245,158,11,0.12);
+  --green:     #10b981;
+  --green-dim: rgba(16,185,129,0.12);
+  --text:      #e2e8f0;
+  --muted:     #4a5a7a;
+  --border:    rgba(255,255,255,0.06);
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Cosmic bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(59,130,246,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 80%, rgba(139,92,246,0.04) 0%, transparent 60%);
+  pointer-events:none;
+}
+
+/* ── HEADER ── */
+header {
+  text-align:center;
+  padding: 48px 24px 32px;
+  position:relative;
+}
+
+.logo {
+  font-family:'Cinzel', serif;
+  font-size: clamp(20px, 4vw, 32px);
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.logo span {
+  background: linear-gradient(130deg, var(--blue), var(--purple));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.subtitle {
+  font-size:11px;
+  font-weight:300;
+  letter-spacing:0.35em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+/* ── MAIN LAYOUT ── */
+.page {
+  max-width:1100px;
+  margin:0 auto;
+  padding: 0 24px 80px;
+  display:grid;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+  align-items:start;
+}
+
+/* ── DIAGRAM ── */
+.diagram {
+  position:relative;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  overflow:hidden;
+}
+
+.diagram::before {
+  content:'';
+  position:absolute; inset:0;
+  background: repeating-linear-gradient(
+    90deg, transparent, transparent 39px,
+    rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px
+  ),
+  repeating-linear-gradient(
+    0deg, transparent, transparent 39px,
+    rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px
+  );
+  border-radius:20px;
+  pointer-events:none;
+}
+
+/* ── NODES ── */
+.node {
+  position:relative;
+  border-radius:12px;
+  padding:16px 20px;
+  border:1px solid;
+  backdrop-filter:blur(8px);
+}
+
+.node-label {
+  font-family:'JetBrains Mono', monospace;
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:0.04em;
+  margin-bottom:4px;
+}
+
+.node-desc {
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.5;
+  font-weight:300;
+}
+
+.node-icon {
+  font-size:20px;
+  margin-bottom:8px;
+  display:block;
+}
+
+/* GitHub Pages */
+.node-github {
+  background: var(--blue-dim);
+  border-color: rgba(59,130,246,0.3);
+  box-shadow: 0 0 32px rgba(59,130,246,0.08);
+  margin-bottom: 8px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+}
+
+.node-github .node-icon { margin-bottom:0; font-size:24px; }
+
+.node-github-content { flex:1; }
+
+.node-github .node-label { color: var(--blue); font-size:13px; }
+
+.github-files {
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+
+.file-chip {
+  font-family:'JetBrains Mono', monospace;
+  font-size:10px;
+  padding:3px 9px;
+  border-radius:6px;
+  background: rgba(59,130,246,0.1);
+  border:1px solid rgba(59,130,246,0.2);
+  color: rgba(59,130,246,0.9);
+}
+
+/* Browser box */
+.browser-box {
+  background: var(--purple-dim);
+  border: 1px solid rgba(139,92,246,0.25);
+  border-radius:16px;
+  padding:20px;
+  margin: 8px 0;
+  position:relative;
+}
+
+.browser-label {
+  font-family:'Cinzel', serif;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color: rgba(139,92,246,0.7);
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.browser-label::before {
+  content:'';
+  display:inline-block;
+  width:28px; height:2px;
+  background: rgba(139,92,246,0.4);
+}
+
+.browser-inner {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+/* cards-data.js node */
+.node-cards {
+  background: rgba(59,130,246,0.08);
+  border-color: rgba(59,130,246,0.25);
+}
+.node-cards .node-label { color: var(--blue); }
+
+/* app.js node */
+.node-app {
+  background: rgba(139,92,246,0.1);
+  border-color: rgba(139,92,246,0.3);
+  box-shadow: 0 0 24px rgba(139,92,246,0.06);
+}
+.node-app .node-label { color: var(--purple); }
+
+.app-features {
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.feature-line {
+  font-size:10px;
+  color: rgba(139,92,246,0.7);
+  font-family:'JetBrains Mono', monospace;
+  padding-left:8px;
+  border-left:2px solid rgba(139,92,246,0.2);
+}
+
+/* localStorage node */
+.node-storage {
+  background: var(--green-dim);
+  border-color: rgba(16,185,129,0.25);
+  grid-column: 1 / -1;
+  display:flex;
+  gap:20px;
+  align-items:center;
+}
+.node-storage .node-label { color: var(--green); }
+.node-storage .node-icon { margin-bottom:0; font-size:22px; }
+
+.storage-keys {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:0;
+}
+
+.storage-key {
+  font-family:'JetBrains Mono', monospace;
+  font-size:9px;
+  padding:3px 8px;
+  border-radius:5px;
+  background: rgba(16,185,129,0.1);
+  border:1px solid rgba(16,185,129,0.2);
+  color: rgba(16,185,129,0.9);
+}
+
+/* CDN node */
+.node-cdn {
+  background: var(--orange-dim);
+  border-color: rgba(245,158,11,0.3);
+  box-shadow: 0 0 32px rgba(245,158,11,0.06);
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+}
+.node-cdn .node-label { color: var(--orange); font-size:13px; }
+.node-cdn .node-icon { margin-bottom:0; font-size:24px; }
+
+/* ── SVG CONNECTIONS ── */
+.connections-svg {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  overflow:visible;
+}
+
+/* ── ARROW LABELS ── */
+.arrow-row {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding: 4px 0;
+  position:relative;
+}
+
+.arrow-line {
+  height:1px;
+  flex:1;
+  max-width:60px;
+  position:relative;
+  overflow:visible;
+}
+
+.arrow-label {
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:0.06em;
+  font-family:'JetBrains Mono', monospace;
+  text-align:center;
+  padding:3px 10px;
+  border-radius:6px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  white-space:nowrap;
+}
+
+/* ── ANIMATED FLOW INDICATORS ── */
+.flow-row {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:0;
+  padding:6px 0;
+}
+
+.flow-track {
+  position:relative;
+  height:24px;
+  display:flex;
+  align-items:center;
+}
+
+.flow-pipe {
+  width:80px;
+  height:2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  position:relative;
+  overflow:hidden;
+  border-radius:2px;
+}
+
+.flow-pipe::after {
+  content:'';
+  position:absolute;
+  top:50%;
+  left:-20px;
+  width:20px;
+  height:4px;
+  margin-top:-2px;
+  border-radius:2px;
+  background:currentColor;
+  animation: flow-particle 1.8s linear infinite;
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes flow-particle {
+  0%  { left:-20px; opacity:0; }
+  10% { opacity:1; }
+  90% { opacity:1; }
+  100%{ left:100%; opacity:0; }
+}
+
+/* ── SIDE PANEL ── */
+.panel {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.panel-section {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+}
+
+.panel-title {
+  font-family:'Cinzel', serif;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:16px;
+}
+
+/* Legend */
+.legend-item {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 0;
+  border-bottom:1px solid var(--border);
+}
+.legend-item:last-child { border-bottom:none; }
+
+.legend-dot {
+  width:10px;
+  height:10px;
+  border-radius:3px;
+  flex-shrink:0;
+}
+
+.legend-name {
+  font-size:12px;
+  font-weight:500;
+}
+
+.legend-role {
+  font-size:10px;
+  color:var(--muted);
+  margin-left:auto;
+  font-family:'JetBrains Mono', monospace;
+  text-align:right;
+}
+
+/* Flow steps */
+.step {
+  display:flex;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+  animation: step-in 0.4s ease forwards;
+  opacity:0;
+}
+.step:last-child { border-bottom:none; }
+
+.step:nth-child(1) { animation-delay:0.2s; }
+.step:nth-child(2) { animation-delay:0.4s; }
+.step:nth-child(3) { animation-delay:0.6s; }
+.step:nth-child(4) { animation-delay:0.8s; }
+.step:nth-child(5) { animation-delay:1.0s; }
+
+@keyframes step-in {
+  from { opacity:0; transform:translateX(8px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+.step-num {
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:600;
+  flex-shrink:0;
+  margin-top:1px;
+}
+
+.step-body {}
+
+.step-title {
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:3px;
+}
+
+.step-detail {
+  font-size:10px;
+  color:var(--muted);
+  line-height:1.5;
+  font-family:'JetBrains Mono', monospace;
+}
+
+/* Stats */
+.stat-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.stat-row:last-child { border-bottom:none; }
+
+.stat-label {
+  font-size:11px;
+  color:var(--muted);
+}
+
+.stat-value {
+  font-family:'JetBrains Mono', monospace;
+  font-size:12px;
+  font-weight:500;
+}
+
+/* ── CONNECTOR ARROWS between diagram sections ── */
+.connector {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:2px 0;
+  gap:2px;
+  position:relative;
+}
+
+.connector-line {
+  width:2px;
+  height:20px;
+  border-radius:2px;
+  position:relative;
+  overflow:hidden;
+}
+
+.connector-line::after {
+  content:'';
+  position:absolute;
+  top:-8px;
+  left:50%;
+  transform:translateX(-50%);
+  width:6px;
+  height:8px;
+  border-radius:3px;
+  background:currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: drip 1.6s ease-in-out infinite;
+}
+
+@keyframes drip {
+  0%   { top:-8px; opacity:0; }
+  20%  { opacity:1; }
+  80%  { opacity:1; }
+  100% { top:20px; opacity:0; }
+}
+
+.connector-arrow {
+  font-size:14px;
+  line-height:1;
+  margin-top:-4px;
+}
+
+.connector-tag {
+  font-size:9px;
+  font-family:'JetBrains Mono', monospace;
+  padding:2px 8px;
+  border-radius:4px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  color:var(--muted);
+  white-space:nowrap;
+}
+
+/* ── INTERNAL ARROW (cards-data → app.js) ── */
+.internal-flow {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  grid-column:1/-1;
+  padding:4px 0 8px;
+}
+
+.int-pipe {
+  height:2px;
+  width:40px;
+  position:relative;
+  overflow:hidden;
+  border-radius:2px;
+}
+
+.int-pipe::before {
+  content:'';
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+}
+
+.int-pipe::after {
+  content:'';
+  position:absolute;
+  top:50%; left:-10px;
+  width:10px; height:3px;
+  margin-top:-1.5px;
+  border-radius:2px;
+  background:currentColor;
+  box-shadow:0 0 6px currentColor;
+  animation:flow-particle 1.4s linear infinite;
+}
+
+.int-label {
+  font-size:9px;
+  font-family:'JetBrains Mono', monospace;
+  color:var(--muted);
+  padding:2px 8px;
+  background:var(--bg);
+  border-radius:4px;
+  border:1px solid var(--border);
+  white-space:nowrap;
+}
+
+/* ── PAGE LOAD ANIMATION ── */
+.diagram > * {
+  animation:fade-up 0.5s ease forwards;
+  opacity:0;
+}
+.diagram > *:nth-child(1) { animation-delay:0.1s; }
+.diagram > *:nth-child(2) { animation-delay:0.25s; }
+.diagram > *:nth-child(3) { animation-delay:0.4s; }
+.diagram > *:nth-child(4) { animation-delay:0.55s; }
+.diagram > *:nth-child(5) { animation-delay:0.7s; }
+
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 800px) {
+  .page { grid-template-columns:1fr; }
+  .browser-inner { grid-template-columns:1fr; }
+  .node-github, .node-cdn, .node-storage { flex-direction:column; align-items:flex-start; }
+}
+
+/* ── TITLE STRIP ── */
+.diagram-title {
+  font-family:'Cinzel', serif;
+  font-size:10px;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.diagram-title::after {
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--border);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Project <span>Alex</span></div>
+  <div class="subtitle">System Architecture</div>
+</header>
+
+<div class="page">
+
+  <!-- ── DIAGRAM ── -->
+  <div class="diagram">
+    <div class="diagram-title">Component Map</div>
+
+    <!-- GitHub Pages -->
+    <div class="node node-github">
+      <span class="node-icon">☁️</span>
+      <div class="node-github-content">
+        <div class="node-label" style="color:var(--blue)">GitHub Pages CDN</div>
+        <div class="node-desc">Hosts and serves all static files globally</div>
+        <div class="github-files">
+          <span class="file-chip">index.html</span>
+          <span class="file-chip">cards-data.js</span>
+          <span class="file-chip">app.js</span>
+          <span class="file-chip">styles.css</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connector: GitHub → Browser -->
+    <div class="connector" style="color:var(--blue)">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+      <div class="connector-tag">page load · one-time · instant</div>
+    </div>
+
+    <!-- Browser Box -->
+    <div class="browser-box">
+      <div class="browser-label">Browser</div>
+      <div class="browser-inner">
+
+        <!-- cards-data.js -->
+        <div class="node node-cards">
+          <span class="node-icon">🗂️</span>
+          <div class="node-label">cards-data.js</div>
+          <div class="node-desc">500 TCG cards in memory. Shuffled into a local deck on load.</div>
+        </div>
+
+        <!-- app.js -->
+        <div class="node node-app">
+          <span class="node-icon">⚙️</span>
+          <div class="node-label">app.js</div>
+          <div class="node-desc">Core game logic</div>
+          <div class="app-features">
+            <span class="feature-line">deck.pop() → draw</span>
+            <span class="feature-line">flip animation</span>
+            <span class="feature-line">claim / countdown</span>
+            <span class="feature-line">preloadNext()</span>
+          </div>
+        </div>
+
+        <!-- Internal flow: cards-data → app.js -->
+        <div class="internal-flow">
+          <div class="int-label">shuffle &amp; build deck</div>
+          <div class="int-pipe" style="color:var(--blue)"></div>
+          <div style="font-size:12px;color:var(--blue);margin:0 2px">→</div>
+          <div class="int-pipe" style="color:var(--purple)"></div>
+        </div>
+
+        <!-- localStorage -->
+        <div class="node node-storage">
+          <span class="node-icon">💾</span>
+          <div>
+            <div class="node-label">localStorage</div>
+            <div class="node-desc">Persists across sessions</div>
+            <div class="storage-keys" style="margin-top:6px">
+              <span class="storage-key">collection[]</span>
+              <span class="storage-key">lastClaimDate</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Connector: Browser → CDN (image requests) -->
+    <div class="connector" style="color:var(--orange)">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+      <div class="connector-tag">image fetch · per card reveal · CDN-cached</div>
+    </div>
+
+    <!-- External CDN -->
+    <div class="node node-cdn">
+      <span class="node-icon">🌐</span>
+      <div>
+        <div class="node-label" style="color:var(--orange)">images.pokemontcg.io</div>
+        <div class="node-desc">External CDN serving card artwork. Only called when a card is revealed — never for card selection.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SIDE PANEL ── -->
+  <div class="panel">
+
+    <!-- Legend -->
+    <div class="panel-section">
+      <div class="panel-title">Legend</div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--blue)"></div>
+        <div class="legend-name">GitHub Pages</div>
+        <div class="legend-role">host / CDN</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--purple)"></div>
+        <div class="legend-name">Browser</div>
+        <div class="legend-role">runtime</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--blue); opacity:0.6"></div>
+        <div class="legend-name">cards-data.js</div>
+        <div class="legend-role">local data</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--green)"></div>
+        <div class="legend-name">localStorage</div>
+        <div class="legend-role">persistence</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--orange)"></div>
+        <div class="legend-name">Image CDN</div>
+        <div class="legend-role">external</div>
+      </div>
+    </div>
+
+    <!-- Data flows -->
+    <div class="panel-section">
+      <div class="panel-title">Data Flows</div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--blue-dim);color:var(--blue)">1</div>
+        <div class="step-body">
+          <div class="step-title">Page Load</div>
+          <div class="step-detail">GitHub CDN → browser<br>cards-data.js loaded once,<br>deck shuffled in memory</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--purple-dim);color:var(--purple)">2</div>
+        <div class="step-body">
+          <div class="step-title">Card Draw</div>
+          <div class="step-detail">deck.pop() → instant<br>image fetch from CDN<br>3D flip animation</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--orange-dim);color:var(--orange)">3</div>
+        <div class="step-body">
+          <div class="step-title">Image Preload</div>
+          <div class="step-detail">Next card image prefetched<br>in background while user<br>views current card</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--green-dim);color:var(--green)">4</div>
+        <div class="step-body">
+          <div class="step-title">Claim</div>
+          <div class="step-detail">Card → localStorage<br>Date saved, countdown<br>starts (resets at midnight)</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--green-dim);color:var(--green)">5</div>
+        <div class="step-body">
+          <div class="step-title">Return Visit</div>
+          <div class="step-detail">localStorage → app.js<br>Collection restored<br>instantly, no API needed</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="panel-title">At a Glance</div>
+      <div class="stat-row">
+        <span class="stat-label">External API calls</span>
+        <span class="stat-value" style="color:var(--green)">0 on load</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Card data file</span>
+        <span class="stat-value">111 KB</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Cards available</span>
+        <span class="stat-value">500</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Card selection</span>
+        <span class="stat-value" style="color:var(--green)">synchronous</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Image source</span>
+        <span class="stat-value" style="color:var(--orange)">CDN only</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">User data</span>
+        <span class="stat-value" style="color:var(--green)">localStorage</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
