@@ -5,9 +5,13 @@
 // =============================================
 
 const API = 'https://api.pokemontcg.io/v2/cards';
-const TOTAL_PAGES = 17000;
 const COLL_KEY = 'projectAlex_collection';
 const DATE_KEY = 'projectAlex_lastClaim';
+
+// Pool config — fetch 100 cards per batch from low page numbers (fast offsets)
+const POOL_BATCH = 100;
+const POOL_MAX_PAGE = 40;   // pages 1-40 = fast server response
+const POOL_REFILL_AT = 15;  // start background refill when pool drops below this
 
 // Rarity tiers: higher = more rare
 const RARITIES = {
@@ -46,6 +50,9 @@ const S = {
   revealed: false,
   loading: false,
   countdownTimer: null,
+  pool: [],           // pre-fetched card pool
+  poolFilling: false, // prevent concurrent refills
+  nextImg: null,      // preloaded Image object for next card
 };
 
 // =============================================
@@ -91,6 +98,7 @@ function init() {
   buildStarfield();
   bindEvents();
   setupHolo();
+  fillPool(); // pre-fetch cards immediately in background
 }
 
 // =============================================
@@ -204,47 +212,72 @@ async function revealCard() {
   if (S.loading) return;
   S.loading = true;
   dom.cardHint.classList.add('hidden');
-  dom.cardLoading.classList.remove('hidden');
 
-  const card = await fetchCard();
+  // Wait for pool if empty (only on very first load)
+  if (S.pool.length === 0) {
+    dom.cardLoading.classList.remove('hidden');
+    await waitForPool();
+  }
+
+  const card = S.pool.pop();
   if (!card) {
     dom.cardLoading.classList.add('hidden');
     dom.cardHint.classList.remove('hidden');
     S.loading = false;
-    toast('Could not fetch card — check your connection.');
+    toast('Could not fetch cards — check your connection.');
     return;
   }
 
+  // Trigger background refill if pool is running low
+  if (S.pool.length < POOL_REFILL_AT) fillPool();
+
   S.card = card;
 
-  // Preload image then flip
-  const img = new Image();
-  img.onload = () => {
+  // Use preloaded image if available, otherwise load now
+  const imgSrc = card.images?.large || card.images?.small || '';
+  const usePreloaded = S.nextImg && S.nextImg.src === imgSrc && S.nextImg.complete;
+
+  if (usePreloaded) {
     dom.cardLoading.classList.add('hidden');
-    dom.cardImage.src = img.src;
-    applyRarityStyle(card);
-
-    // Flip card
-    S.revealed = true;
-    dom.cardInner.classList.add('revealed');
-
-    // Show info after flip lands
-    setTimeout(() => {
-      populateInfo(card);
-      dom.cardInfo.classList.remove('hidden');
-      showActions();
+    dom.cardImage.src = imgSrc;
+    flipReveal(card);
+  } else {
+    dom.cardLoading.classList.remove('hidden');
+    const img = new Image();
+    img.onload = () => {
+      dom.cardLoading.classList.add('hidden');
+      dom.cardImage.src = imgSrc;
+      flipReveal(card);
+    };
+    img.onerror = () => {
+      dom.cardLoading.classList.add('hidden');
       S.loading = false;
-    }, 550);
-  };
+      drawAnother(); // skip broken image
+    };
+    img.src = imgSrc;
+  }
+}
 
-  img.onerror = () => {
-    dom.cardLoading.classList.add('hidden');
+function flipReveal(card) {
+  applyRarityStyle(card);
+  S.revealed = true;
+  dom.cardInner.classList.add('revealed');
+
+  setTimeout(() => {
+    populateInfo(card);
+    dom.cardInfo.classList.remove('hidden');
+    showActions();
     S.loading = false;
-    // Try again with different card
-    drawAnother();
-  };
+    preloadNext(); // preload next card image in background
+  }, 550);
+}
 
-  img.src = card.images?.large || card.images?.small || '';
+function preloadNext() {
+  const next = S.pool[S.pool.length - 1];
+  if (!next) return;
+  const img = new Image();
+  img.src = next.images?.large || next.images?.small || '';
+  S.nextImg = img;
 }
 
 async function drawAnother() {
@@ -364,20 +397,44 @@ function tick() {
 }
 
 // =============================================
-//  FETCH
+//  POOL — fetch 100 cards per call, draw locally
 // =============================================
-async function fetchCard() {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    try {
-      const page = Math.floor(Math.random() * TOTAL_PAGES) + 1;
-      const url = `${API}?pageSize=1&page=${page}&select=id,name,images,rarity,set,hp,types`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(res.status);
-      const { data } = await res.json();
-      if (data?.length) return data[0];
-    } catch { /* retry */ }
+async function fillPool() {
+  if (S.poolFilling) return;
+  S.poolFilling = true;
+  try {
+    const page = Math.floor(Math.random() * POOL_MAX_PAGE) + 1;
+    const url = `${API}?pageSize=${POOL_BATCH}&page=${page}&select=id,name,images,rarity,set,hp,types`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const { data } = await res.json();
+    if (data?.length) {
+      // Filter out cards missing images, then shuffle and add to pool
+      const valid = data.filter(c => c.images?.large || c.images?.small);
+      shuffle(valid);
+      S.pool.push(...valid);
+    }
+  } catch { /* silently retry next time */ }
+  S.poolFilling = false;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return null;
+}
+
+// Wait for pool to have cards (used only on very first load)
+function waitForPool() {
+  return new Promise(resolve => {
+    if (S.pool.length > 0) { resolve(); return; }
+    const check = setInterval(() => {
+      if (S.pool.length > 0) { clearInterval(check); resolve(); }
+    }, 100);
+    // Give up after 10s and let error handling deal with it
+    setTimeout(() => { clearInterval(check); resolve(); }, 10000);
+  });
 }
 
 // =============================================
