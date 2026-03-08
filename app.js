@@ -1,94 +1,41 @@
 'use strict';
 
 // =============================================
-//  PROJECT ALEX — PokeAPI version
-//  pokeapi.co is CDN-backed, fast, and free
+//  PROJECT ALEX — Local card data version
+//  Cards loaded from cards-data.js (no API calls for card selection)
+//  Images served from images.pokemontcg.io CDN
 // =============================================
 
-const API          = 'https://pokeapi.co/api/v2/pokemon/';
-const TOTAL_POKEMON = 1025;   // Gen 1–9
-const POOL_SIZE    = 20;      // parallel fetches per batch
-const POOL_REFILL  = 5;       // refill when pool drops below this
-const COLL_KEY     = 'projectAlex_collection';
-const DATE_KEY     = 'projectAlex_lastClaim';
-
-// =============================================
-//  TYPE → CARD BACKGROUND
-// =============================================
-const TYPE_COLORS = {
-  fire:     'linear-gradient(160deg,#6b1a0a,#b83220)',
-  water:    'linear-gradient(160deg,#0a2d5c,#165a9e)',
-  grass:    'linear-gradient(160deg,#12311f,#205a3a)',
-  electric: 'linear-gradient(160deg,#4a3100,#7a5500)',
-  psychic:  'linear-gradient(160deg,#3d0028,#6e0048)',
-  ice:      'linear-gradient(160deg,#0a2d4a,#0f4a7a)',
-  dragon:   'linear-gradient(160deg,#0a0050,#150080)',
-  dark:     'linear-gradient(160deg,#0a0a0a,#141428)',
-  fairy:    'linear-gradient(160deg,#4a0030,#7a0052)',
-  fighting: 'linear-gradient(160deg,#4a0000,#780f0f)',
-  normal:   'linear-gradient(160deg,#1c2633,#273647)',
-  flying:   'linear-gradient(160deg,#141450,#202070)',
-  poison:   'linear-gradient(160deg,#250040,#3d0066)',
-  ground:   'linear-gradient(160deg,#2e1a10,#4a2e1e)',
-  rock:     'linear-gradient(160deg,#1e1e10,#30301a)',
-  bug:      'linear-gradient(160deg,#152000,#243500)',
-  ghost:    'linear-gradient(160deg,#120020,#200038)',
-  steel:    'linear-gradient(160deg,#141420,#202032)',
-};
+const COLL_KEY = 'projectAlex_collection';
+const DATE_KEY = 'projectAlex_lastClaim';
 
 // =============================================
 //  RARITIES
 // =============================================
 const RARITIES = {
-  'Common':     { tier: 1, color: '#9ca3af', holo: false },
-  'Uncommon':   { tier: 2, color: '#4ade80', holo: false },
-  'Rare':       { tier: 3, color: '#60a5fa', holo: false },
-  'Rare Holo':  { tier: 4, color: '#a78bfa', holo: true  },
-  'Ultra Rare': { tier: 7, color: '#f43f5e', holo: true  },
-  'Hyper Rare': { tier: 9, color: '#d946ef', holo: true  },
+  'Common':                    { tier: 1, color: '#9ca3af', holo: false },
+  'Uncommon':                  { tier: 2, color: '#4ade80', holo: false },
+  'Rare':                      { tier: 3, color: '#60a5fa', holo: false },
+  'Rare Holo':                 { tier: 4, color: '#a78bfa', holo: true  },
+  'Rare Reverse Holo':         { tier: 4, color: '#a78bfa', holo: true  },
+  'Rare Holo EX':              { tier: 5, color: '#f59e0b', holo: true  },
+  'Rare Holo GX':              { tier: 5, color: '#f59e0b', holo: true  },
+  'Rare Holo V':               { tier: 5, color: '#f59e0b', holo: true  },
+  'Rare Holo LV.X':            { tier: 5, color: '#f59e0b', holo: true  },
+  'Rare Holo Star':            { tier: 6, color: '#fb923c', holo: true  },
+  'Rare Holo VMAX':            { tier: 6, color: '#fb923c', holo: true  },
+  'Rare Holo VSTAR':           { tier: 6, color: '#fb923c', holo: true  },
+  'Rare Ultra':                { tier: 7, color: '#f43f5e', holo: true  },
+  'Illustration Rare':         { tier: 7, color: '#f43f5e', holo: true  },
+  'Trainer Gallery Rare Holo': { tier: 7, color: '#f43f5e', holo: true  },
+  'Rare Rainbow':              { tier: 8, color: '#e879f9', holo: true  },
+  'Rare Secret':               { tier: 8, color: '#e879f9', holo: true  },
+  'Special Illustration Rare': { tier: 8, color: '#e879f9', holo: true  },
+  'Hyper Rare':                { tier: 9, color: '#d946ef', holo: true  },
 };
 
 function getRarity(r) {
   return RARITIES[r] || { tier: 1, color: '#9ca3af', holo: false };
-}
-
-function assignRarity(baseExp) {
-  if (baseExp >= 300) return 'Hyper Rare';
-  if (baseExp >= 250) return 'Ultra Rare';
-  if (baseExp >= 180) return 'Rare Holo';
-  if (baseExp >= 120) return 'Rare';
-  if (baseExp >= 70)  return 'Uncommon';
-  return 'Common';
-}
-
-function getGen(id) {
-  if (id <= 151) return 'Gen I';
-  if (id <= 251) return 'Gen II';
-  if (id <= 386) return 'Gen III';
-  if (id <= 493) return 'Gen IV';
-  if (id <= 649) return 'Gen V';
-  if (id <= 721) return 'Gen VI';
-  if (id <= 809) return 'Gen VII';
-  if (id <= 905) return 'Gen VIII';
-  return 'Gen IX';
-}
-
-function mapPokemon(p) {
-  const type = p.types?.[0]?.type?.name || 'normal';
-  const rarity = assignRarity(p.base_experience || 0);
-  return {
-    id: p.id,
-    name: p.name.charAt(0).toUpperCase() + p.name.slice(1).replace(/-/g, ' '),
-    images: {
-      large: p.sprites?.other?.['official-artwork']?.front_default || p.sprites?.front_default,
-      small: p.sprites?.front_default,
-    },
-    rarity,
-    set: { name: getGen(p.id) },
-    hp: p.stats?.find(s => s.stat.name === 'hp')?.base_stat?.toString() || '',
-    types: p.types?.map(t => t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1)) || [],
-    typeBg: TYPE_COLORS[type] || TYPE_COLORS.normal,
-  };
 }
 
 // =============================================
@@ -101,11 +48,8 @@ const S = {
   revealed: false,
   loading: false,
   countdownTimer: null,
-  pool: [],
-  poolFilling: false,
-  nextImg: null,
-  readyCard: null,
-  readyImg: null,
+  deck: [],       // shuffled copy of CARDS_DATA
+  nextImg: null,  // preloaded image for next card
 };
 
 // =============================================
@@ -147,12 +91,44 @@ const dom = {
 //  INIT
 // =============================================
 function init() {
+  if (!window.CARDS_DATA?.length) {
+    alert('Card data failed to load. Please refresh.');
+    return;
+  }
   loadStorage();
   buildStarfield();
   bindEvents();
   setupHolo();
-  prefetchFirstCard(); // single fast fetch + image preload
-  fillPool();          // background pool fill (parallel)
+  buildDeck();
+  preloadNext(); // preload first card image immediately
+}
+
+// =============================================
+//  DECK — shuffle local data, refill when empty
+// =============================================
+function buildDeck() {
+  S.deck = [...window.CARDS_DATA];
+  shuffle(S.deck);
+}
+
+function drawCard() {
+  if (S.deck.length === 0) buildDeck(); // reshuffle when exhausted
+  return S.deck.pop();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function preloadNext() {
+  const next = S.deck[S.deck.length - 1];
+  if (!next) return;
+  const img = new Image();
+  img.src = next.images?.large || next.images?.small || '';
+  S.nextImg = img;
 }
 
 // =============================================
@@ -245,43 +221,24 @@ function switchView(view) {
 // =============================================
 //  CARD FLOW
 // =============================================
-async function onCardTap() {
+function onCardTap() {
   if (S.loading || S.revealed) return;
-  await revealCard();
+  revealCard();
 }
 
-async function revealCard() {
+function revealCard() {
   if (S.loading) return;
   S.loading = true;
   dom.cardHint.classList.add('hidden');
 
-  let card, preImg;
-
-  if (S.readyCard) {
-    card = S.readyCard; preImg = S.readyImg;
-    S.readyCard = null; S.readyImg = null;
-  } else if (S.pool.length > 0) {
-    card = S.pool.pop(); preImg = S.nextImg;
-    if (S.pool.length < POOL_REFILL) fillPool();
-  } else {
-    dom.cardLoading.classList.remove('hidden');
-    await waitForPool();
-    card = S.pool.pop();
-  }
-
-  if (!card) {
-    dom.cardLoading.classList.add('hidden');
-    dom.cardHint.classList.remove('hidden');
-    S.loading = false;
-    toast('Could not load Pokémon — check your connection.');
-    return;
-  }
-
+  const card = drawCard();
   S.card = card;
+
   const imgSrc = card.images?.large || card.images?.small || '';
-  const imageReady = preImg?.complete && preImg.naturalHeight > 0;
+  const imageReady = S.nextImg?.complete && S.nextImg.naturalHeight > 0;
 
   if (imageReady) {
+    // Image already cached — flip immediately, no spinner
     dom.cardImage.src = imgSrc;
     flipReveal(card);
   } else {
@@ -293,16 +250,18 @@ async function revealCard() {
       flipReveal(card);
     };
     img.onerror = () => {
+      // Skip broken image, try next card
       dom.cardLoading.classList.add('hidden');
       S.loading = false;
-      drawAnother();
+      S.revealed = false;
+      revealCard();
     };
     img.src = imgSrc;
   }
 }
 
 function flipReveal(card) {
-  applyCardStyle(card);
+  applyRarityStyle(card);
   S.revealed = true;
   dom.cardInner.classList.add('revealed');
   setTimeout(() => {
@@ -310,19 +269,11 @@ function flipReveal(card) {
     dom.cardInfo.classList.remove('hidden');
     showActions();
     S.loading = false;
-    preloadNext();
+    preloadNext(); // preload next card image while user views current
   }, 550);
 }
 
-function preloadNext() {
-  const next = S.pool[S.pool.length - 1];
-  if (!next) return;
-  const img = new Image();
-  img.src = next.images?.large || next.images?.small || '';
-  S.nextImg = img;
-}
-
-async function drawAnother() {
+function drawAnother() {
   if (S.loading) return;
   dom.cardInfo.classList.add('hidden');
   dom.cardActions.classList.add('hidden');
@@ -331,7 +282,6 @@ async function drawAnother() {
   S.revealed = false;
   dom.cardInner.classList.remove('revealed');
   dom.cardFront.className = 'card-face card-front';
-  dom.cardFront.style.background = '';
   dom.holoOverlay.className = 'holo-overlay';
   dom.claimBtn.textContent = 'Add to Collection';
   dom.claimBtn.disabled = false;
@@ -339,11 +289,10 @@ async function drawAnother() {
   setTimeout(() => revealCard(), 550);
 }
 
-function applyCardStyle(card) {
+function applyRarityStyle(card) {
   const cfg = getRarity(card.rarity);
   dom.cardFront.className = 'card-face card-front';
   dom.holoOverlay.className = 'holo-overlay';
-  dom.cardFront.style.background = card.typeBg || TYPE_COLORS.normal;
 
   if (cfg.tier >= 7) {
     dom.cardFront.classList.add('is-ultra');
@@ -360,7 +309,7 @@ function populateInfo(card) {
   const cfg = getRarity(rarity);
   dom.rarityBadge.textContent = rarity || 'Unknown';
   dom.rarityBadge.className = 'rarity-badge' + (cfg.holo ? ' gold' : '');
-  dom.setName.textContent = card.set?.name || '';
+  dom.setName.textContent = card.setName || card.set?.name || '';
   dom.cardType.textContent = card.types?.length ? `⚡ ${card.types.join(' / ')}` : '';
   dom.cardHp.textContent = card.hp ? `${card.hp} HP` : '';
 }
@@ -428,58 +377,6 @@ function tick() {
 }
 
 // =============================================
-//  POOL — parallel PokeAPI fetches
-// =============================================
-function randomId() { return Math.floor(Math.random() * TOTAL_POKEMON) + 1; }
-
-async function prefetchFirstCard() {
-  try {
-    const res = await fetch(`${API}${randomId()}`);
-    const data = await res.json();
-    const card = mapPokemon(data);
-    if (card.images?.large) {
-      S.readyCard = card;
-      S.readyImg = new Image();
-      S.readyImg.src = card.images.large;
-    }
-  } catch { /* fall back to pool */ }
-}
-
-async function fillPool() {
-  if (S.poolFilling) return;
-  S.poolFilling = true;
-  try {
-    const ids = Array.from({ length: POOL_SIZE }, randomId);
-    const results = await Promise.allSettled(
-      ids.map(id => fetch(`${API}${id}`).then(r => r.json()).then(mapPokemon))
-    );
-    const cards = results
-      .filter(r => r.status === 'fulfilled' && r.value?.images?.large)
-      .map(r => r.value);
-    shuffle(cards);
-    S.pool.push(...cards);
-  } catch { /* retry on next draw */ }
-  S.poolFilling = false;
-}
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-}
-
-function waitForPool() {
-  return new Promise(resolve => {
-    if (S.pool.length > 0) { resolve(); return; }
-    const check = setInterval(() => {
-      if (S.pool.length > 0) { clearInterval(check); resolve(); }
-    }, 100);
-    setTimeout(() => { clearInterval(check); resolve(); }, 8000);
-  });
-}
-
-// =============================================
 //  COLLECTION RENDER
 // =============================================
 function renderCollection() {
@@ -508,9 +405,7 @@ function renderCollection() {
   dom.collTiers.innerHTML = sorted.map(([rarity, cards]) => {
     const cfg = getRarity(rarity);
     const cardHtml = cards.map(c => `
-      <div class="coll-card ${cfg.holo ? 'holo' : ''}"
-           style="background:${c.typeBg || TYPE_COLORS.normal}"
-           title="${c.name}">
+      <div class="coll-card ${cfg.holo ? 'holo' : ''}" title="${c.name}">
         <img src="${c.images?.large || c.images?.small || ''}" alt="${c.name}" loading="lazy">
       </div>
     `).join('');
