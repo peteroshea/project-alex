@@ -1,0 +1,701 @@
+/* =============================================
+   PROJECT ALEX — Pokémon Card Collector
+   Dark cosmic luxury aesthetic
+   ============================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600&display=swap');
+
+/* ===== VARIABLES ===== */
+:root {
+  --bg: #060912;
+  --bg-2: #0d1427;
+  --bg-3: #111827;
+  --border: rgba(255,255,255,0.07);
+  --border-glow: rgba(100,105,220,0.4);
+
+  --text: #e8eaf0;
+  --text-muted: #5a6680;
+  --text-dim: #2d3a52;
+
+  --accent: #5b6af0;
+  --accent-glow: rgba(91,106,240,0.35);
+  --purple: #8b5cf6;
+  --purple-glow: rgba(139,92,246,0.35);
+  --gold: #f0b429;
+  --gold-glow: rgba(240,180,41,0.4);
+  --pink: #f43f5e;
+
+  --card-w: 264px;
+  --card-h: 368px;
+  --card-r: 14px;
+
+  --font-d: 'Cinzel', serif;
+  --font-b: 'Outfit', sans-serif;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--font-b);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== COSMIC BACKGROUND ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 15%, rgba(91,106,240,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 85% 85%, rgba(139,92,246,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(240,180,41,0.02) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.starfield {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: white;
+  animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+  opacity: 0;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: var(--bright, 0.4); transform: scale(1); }
+}
+
+/* ===== APP SHELL ===== */
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 120px;
+}
+
+/* ===== HEADER ===== */
+.header {
+  text-align: center;
+  padding: 36px 0 20px;
+  user-select: none;
+}
+
+.logo {
+  font-family: var(--font-d);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.logo span {
+  background: linear-gradient(130deg, var(--accent) 0%, var(--purple) 50%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ===== NAV ===== */
+.nav {
+  display: flex;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 28px;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 11px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-b);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.nav-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  box-shadow: 0 4px 24px var(--accent-glow);
+}
+
+/* ===== VIEWS ===== */
+.view { display: none; flex-direction: column; align-items: center; }
+.view.active { display: flex; }
+
+/* ===== CARD AREA ===== */
+.card-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+/* ===== 3D CARD SCENE ===== */
+.card-scene {
+  perspective: 1400px;
+  width: var(--card-w);
+  height: var(--card-h);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+  transition: transform 0.85s var(--ease-smooth);
+  will-change: transform;
+}
+
+.card-inner.revealed {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-r);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* ===== CARD BACK (shown first — no transform) ===== */
+.card-back {
+  background: linear-gradient(160deg, #141b38 0%, #0a0f22 100%);
+  border: 1.5px solid rgba(91,106,240,0.25);
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 0 40px rgba(91,106,240,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-pattern {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 16px,
+      rgba(91,106,240,0.03) 16px,
+      rgba(91,106,240,0.03) 32px
+    );
+}
+
+.back-border {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(91,106,240,0.18);
+  border-radius: 8px;
+}
+
+.back-border.inner {
+  inset: 28px;
+  border-color: rgba(91,106,240,0.1);
+  border-radius: 4px;
+}
+
+.pokeball {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(91,106,240,0.5);
+  position: relative;
+  box-shadow:
+    0 0 24px rgba(91,106,240,0.25),
+    0 0 48px rgba(91,106,240,0.1),
+    inset 0 0 16px rgba(0,0,0,0.6);
+}
+
+.pokeball-line {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: rgba(91,106,240,0.5);
+  transform: translateY(-50%);
+}
+
+.pokeball-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  background: var(--bg);
+  border: 2.5px solid rgba(91,106,240,0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(91,106,240,0.4);
+}
+
+/* Card back pulse animation */
+.card-scene:not(.has-card) .pokeball {
+  animation: pokeball-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pokeball-pulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(91,106,240,0.25), 0 0 48px rgba(91,106,240,0.1), inset 0 0 16px rgba(0,0,0,0.6); }
+  50% { box-shadow: 0 0 32px rgba(91,106,240,0.45), 0 0 64px rgba(91,106,240,0.2), inset 0 0 16px rgba(0,0,0,0.6); }
+}
+
+/* ===== CARD FRONT (revealed — rotated 180 so it's on the back side initially) ===== */
+.card-front {
+  transform: rotateY(180deg);
+  background: #0d1427;
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 0 40px rgba(91,106,240,0.08);
+}
+
+.card-front.is-holo {
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 0 48px var(--gold-glow),
+    0 0 80px rgba(240,180,41,0.1);
+  border: 1.5px solid rgba(240,180,41,0.3);
+}
+
+.card-front.is-ultra {
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 0 60px var(--gold-glow),
+    0 0 100px rgba(240,180,41,0.2);
+  border: 1.5px solid rgba(240,180,41,0.55);
+  animation: ultra-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ultra-pulse {
+  0%, 100% { box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 60px var(--gold-glow), 0 0 100px rgba(240,180,41,0.2); }
+  50% { box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 80px rgba(240,180,41,0.7), 0 0 140px rgba(240,180,41,0.35); }
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--card-r);
+  display: block;
+}
+
+/* Holographic shimmer */
+.holo-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-r);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  background: conic-gradient(
+    from var(--angle, 0deg) at var(--mx, 50%) var(--my, 50%),
+    rgba(255,50,150,0.2),
+    rgba(255,160,0,0.2),
+    rgba(255,230,0,0.2),
+    rgba(0,255,150,0.2),
+    rgba(0,150,255,0.2),
+    rgba(150,0,255,0.2),
+    rgba(255,50,150,0.2)
+  );
+  mix-blend-mode: screen;
+}
+
+.holo-overlay.active { opacity: 1; }
+
+/* ===== CARD HINT ===== */
+.card-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: hint-float 3s ease-in-out infinite;
+}
+
+@keyframes hint-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.hint-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: hint-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); box-shadow: none; }
+  50% { opacity: 1; transform: scale(1); box-shadow: 0 0 12px var(--accent-glow); }
+}
+
+.card-hint p {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
+/* ===== LOADING ===== */
+.card-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.card-loading p {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+/* ===== CARD INFO ===== */
+.card-info {
+  text-align: center;
+  width: 100%;
+  max-width: var(--card-w);
+  animation: rise 0.4s var(--ease-spring) forwards;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-name {
+  font-family: var(--font-d);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.rarity-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(91,106,240,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(91,106,240,0.28);
+}
+
+.rarity-badge.gold {
+  background: rgba(240,180,41,0.12);
+  color: var(--gold);
+  border-color: rgba(240,180,41,0.35);
+}
+
+.set-name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.card-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ===== ACTION BUTTONS ===== */
+.card-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: var(--card-w);
+}
+
+.btn {
+  flex: 1;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-b);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active { transform: scale(0.96); }
+
+.btn-claim {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.btn-claim:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-skip {
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn.slim { flex: none; width: 100%; margin-top: 4px; }
+
+/* ===== CLAIMED NOTICE ===== */
+.claimed-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: var(--card-w);
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+
+.clock { font-size: 22px; margin-bottom: 2px; }
+
+.claimed-notice p {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.countdown {
+  font-family: var(--font-d);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+/* ===== COLLECTION VIEW ===== */
+.collection-view { align-items: stretch; width: 100%; }
+
+.coll-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.coll-stat { display: flex; flex-direction: column; align-items: center; }
+
+.coll-num {
+  font-family: var(--font-d);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.coll-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.coll-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 28px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.empty-sub {
+  font-size: 12px !important;
+  color: var(--text-dim) !important;
+  margin-top: 6px;
+}
+
+/* Tier sections */
+.tier-section { margin-bottom: 28px; }
+
+.tier-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tier-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tier-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.coll-card {
+  aspect-ratio: 2/3;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: var(--bg-2);
+}
+
+.coll-card:hover { transform: scale(1.04); }
+
+.coll-card.holo {
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+.coll-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(17,24,39,0.95);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 11px 22px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 999;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  transition: transform 0.35s var(--ease-spring), opacity 0.35s ease;
+  opacity: 0;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ===== UTILS ===== */
+.hidden { display: none !important; }

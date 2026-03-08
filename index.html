@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Project Alex — Pokémon Card Collector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="starfield" id="starfield"></div>
+
+  <div class="app">
+
+    <header class="header">
+      <h1 class="logo">Project <span>Alex</span></h1>
+      <p class="tagline">Pokémon Card Collector</p>
+    </header>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-view="draw">Draw</button>
+      <button class="nav-btn" data-view="collection">Collection</button>
+    </nav>
+
+    <!-- DRAW VIEW -->
+    <section class="view draw-view active" id="drawView">
+      <div class="card-area">
+
+        <div class="card-scene" id="cardScene">
+          <div class="card-inner" id="cardInner">
+
+            <!-- Card Back (decorative — shown first) -->
+            <div class="card-face card-back" id="cardBack">
+              <div class="back-pattern">
+                <div class="back-border"></div>
+                <div class="back-border inner"></div>
+                <div class="pokeball">
+                  <div class="pokeball-line"></div>
+                  <div class="pokeball-center"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Front (Pokemon card — revealed on flip) -->
+            <div class="card-face card-front" id="cardFront">
+              <img class="card-image" id="cardImage" src="" alt="">
+              <div class="holo-overlay" id="holoOverlay"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Hint -->
+        <div class="card-hint" id="cardHint">
+          <div class="hint-pulse"></div>
+          <p>Tap card to reveal</p>
+        </div>
+
+        <!-- Loading -->
+        <div class="card-loading hidden" id="cardLoading">
+          <div class="spinner"></div>
+          <p>Drawing a card…</p>
+        </div>
+
+        <!-- Card Info -->
+        <div class="card-info hidden" id="cardInfo">
+          <div class="card-name" id="cardName"></div>
+          <div class="card-meta">
+            <span class="rarity-badge" id="rarityBadge"></span>
+            <span class="set-name" id="setName"></span>
+          </div>
+          <div class="card-stats">
+            <span id="cardType"></span>
+            <span id="cardHp"></span>
+          </div>
+        </div>
+
+        <!-- Actions: can claim -->
+        <div class="card-actions hidden" id="cardActions">
+          <button class="btn btn-claim" id="claimBtn">Add to Collection</button>
+          <button class="btn btn-skip" id="skipBtn">Draw Another</button>
+        </div>
+
+        <!-- Already claimed today -->
+        <div class="claimed-notice hidden" id="claimedNotice">
+          <span class="clock">⏰</span>
+          <p>Next card in</p>
+          <div class="countdown" id="countdown">00:00:00</div>
+          <button class="btn btn-skip slim" id="skipBtnClaimed">Draw Another</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COLLECTION VIEW -->
+    <section class="view collection-view" id="collectionView">
+      <div class="coll-stats">
+        <div class="coll-stat">
+          <span class="coll-num" id="totalCards">0</span>
+          <span class="coll-label">Cards</span>
+        </div>
+        <div class="coll-divider"></div>
+        <div class="coll-stat">
+          <span class="coll-num" id="totalRarities">0</span>
+          <span class="coll-label">Rarities</span>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">✦</div>
+        <p>Your collection is empty</p>
+        <p class="empty-sub">Draw cards to start collecting</p>
+      </div>
+
+      <div id="collectionTiers"></div>
+    </section>
+
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
