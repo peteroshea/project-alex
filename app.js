@@ -53,6 +53,8 @@ const S = {
   pool: [],           // pre-fetched card pool
   poolFilling: false, // prevent concurrent refills
   nextImg: null,      // preloaded Image object for next card
+  readyCard: null,    // single card pre-fetched for instant first draw
+  readyImg: null,     // preloaded image for readyCard
 };
 
 // =============================================
@@ -98,7 +100,8 @@ function init() {
   buildStarfield();
   bindEvents();
   setupHolo();
-  fillPool(); // pre-fetch cards immediately in background
+  prefetchFirstCard(); // fast single-card fetch + image preload
+  fillPool();          // background pool for subsequent draws
 }
 
 // =============================================
@@ -213,13 +216,26 @@ async function revealCard() {
   S.loading = true;
   dom.cardHint.classList.add('hidden');
 
-  // Wait for pool if empty (only on very first load)
-  if (S.pool.length === 0) {
+  // Resolve which card + preloaded image to use
+  let card, preImg;
+
+  if (S.readyCard) {
+    // First draw: instant — single card was pre-fetched on page load
+    card = S.readyCard;
+    preImg = S.readyImg;
+    S.readyCard = null;
+    S.readyImg = null;
+  } else if (S.pool.length > 0) {
+    card = S.pool.pop();
+    preImg = S.nextImg;
+    if (S.pool.length < POOL_REFILL_AT) fillPool();
+  } else {
+    // Pool still loading — show spinner and wait
     dom.cardLoading.classList.remove('hidden');
     await waitForPool();
+    card = S.pool.pop();
   }
 
-  const card = S.pool.pop();
   if (!card) {
     dom.cardLoading.classList.add('hidden');
     dom.cardHint.classList.remove('hidden');
@@ -228,17 +244,12 @@ async function revealCard() {
     return;
   }
 
-  // Trigger background refill if pool is running low
-  if (S.pool.length < POOL_REFILL_AT) fillPool();
-
   S.card = card;
-
-  // Use preloaded image if available, otherwise load now
   const imgSrc = card.images?.large || card.images?.small || '';
-  const usePreloaded = S.nextImg && S.nextImg.src === imgSrc && S.nextImg.complete;
+  const imageReady = preImg && preImg.complete && preImg.naturalHeight > 0 && preImg.src.includes(imgSrc.split('/').pop());
 
-  if (usePreloaded) {
-    dom.cardLoading.classList.add('hidden');
+  if (imageReady) {
+    // Image already in cache — flip instantly, no spinner
     dom.cardImage.src = imgSrc;
     flipReveal(card);
   } else {
@@ -252,7 +263,7 @@ async function revealCard() {
     img.onerror = () => {
       dom.cardLoading.classList.add('hidden');
       S.loading = false;
-      drawAnother(); // skip broken image
+      drawAnother();
     };
     img.src = imgSrc;
   }
@@ -399,6 +410,25 @@ function tick() {
 // =============================================
 //  POOL — fetch 100 cards per call, draw locally
 // =============================================
+
+// Fast single-card prefetch on page load — makes first draw instant
+async function prefetchFirstCard() {
+  try {
+    const page = Math.floor(Math.random() * POOL_MAX_PAGE) + 1;
+    const url = `${API}?pageSize=1&page=${page}&select=id,name,images,rarity,set,hp,types`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const { data } = await res.json();
+    const card = data?.[0];
+    if (card && (card.images?.large || card.images?.small)) {
+      S.readyCard = card;
+      // Preload image immediately so flip is instant on tap
+      S.readyImg = new Image();
+      S.readyImg.src = card.images.large || card.images.small;
+    }
+  } catch { /* fall back to pool */ }
+}
+
 async function fillPool() {
   if (S.poolFilling) return;
   S.poolFilling = true;
