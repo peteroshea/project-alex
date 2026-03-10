@@ -517,7 +517,7 @@ function setupTilt() {
       if (dom.holoOverlay.classList.contains('active')) {
         const mx = Math.max(0, Math.min(100, 50 + curY * 2.8));
         const my = Math.max(0, Math.min(100, 50 - curX * 2.2));
-        const holoOpacity = Math.min(1, 0.35 + tiltMag * 0.065);
+        const holoOpacity = Math.min(1, 0.50 + tiltMag * 0.065);
         dom.holoOverlay.style.setProperty('--mx', `${mx.toFixed(1)}%`);
         dom.holoOverlay.style.setProperty('--my', `${my.toFixed(1)}%`);
         dom.holoOverlay.style.opacity = holoOpacity.toFixed(3);
