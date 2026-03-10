@@ -484,38 +484,64 @@ function setupTilt() {
 
   function startListening() {
     let baseGamma = null, baseBeta = null;
+    let targetX = 0, targetY = 0;
+    let curX = 0,    curY = 0;
 
-    window.addEventListener('deviceorientation', e => {
-      if (!S.revealed) {
-        dom.cardScene.style.transform = '';
-        baseGamma = null; baseBeta = null; // recalibrate on next reveal
-        return;
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    const FOLLOW  = 0.1;  // how fast it tracks sensor (0.06=floaty, 0.16=snappy)
+    const RESTORE = 0.07; // how fast it returns to flat
+
+    // rAF loop — smoothly interpolates toward target every frame
+    function tick() {
+      if (S.revealed) {
+        curX = lerp(curX, targetX, FOLLOW);
+        curY = lerp(curY, targetY, FOLLOW);
+      } else {
+        // Ease back to flat when card not revealed; reset base for next reveal
+        curX = lerp(curX, 0, RESTORE);
+        curY = lerp(curY, 0, RESTORE);
+        if (Math.abs(curX) < 0.05 && Math.abs(curY) < 0.05) {
+          curX = 0; curY = 0;
+          baseGamma = null; baseBeta = null;
+        }
       }
 
-      // e.gamma/beta can be null on some iOS orientations — default to 0
+      // Subtle scale lift — card feels like it rises as you tilt it
+      const tiltMag  = Math.sqrt(curX * curX + curY * curY);
+      const liftScale = 1 + tiltMag * 0.004;
+
+      dom.cardScene.style.transform =
+        `rotateX(${curX.toFixed(2)}deg) rotateY(${curY.toFixed(2)}deg) scale(${liftScale.toFixed(3)})`;
+
+      // Holo shimmer — intensity driven by tilt magnitude
+      if (dom.holoOverlay.classList.contains('active')) {
+        const mx = Math.max(0, Math.min(100, 50 + curY * 2.8));
+        const my = Math.max(0, Math.min(100, 50 - curX * 2.2));
+        const holoOpacity = Math.min(1, 0.35 + tiltMag * 0.065);
+        dom.holoOverlay.style.setProperty('--mx', `${mx.toFixed(1)}%`);
+        dom.holoOverlay.style.setProperty('--my', `${my.toFixed(1)}%`);
+        dom.holoOverlay.style.opacity = holoOpacity.toFixed(3);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('deviceorientation', e => {
       const g = e.gamma ?? 0;
       const b = e.beta  ?? 0;
 
-      // Calibrate to current hold position on first event after reveal
-      if (baseGamma === null) { baseGamma = g; baseBeta = b; }
+      // Recalibrate to hold angle when a new card is revealed
+      if (S.revealed && baseGamma === null) { baseGamma = g; baseBeta = b; }
+      if (!S.revealed) return;
 
       const dGamma = g - baseGamma;
       const dBeta  = b - baseBeta;
 
-      const rotY = Math.max(-22, Math.min(22, dGamma * 0.55));
-      const rotX = Math.max(-18, Math.min(18, dBeta  * 0.45));
-
-      dom.cardScene.style.transform = `rotateX(${-rotX}deg) rotateY(${rotY}deg)`;
-
-      // Drive holo overlay with tilt
-      if (dom.holoOverlay.classList.contains('active')) {
-        const mx = Math.max(0, Math.min(100, 50 + dGamma * 1.2));
-        const my = Math.max(0, Math.min(100, 50 + dBeta  * 1.0));
-        dom.holoOverlay.style.setProperty('--mx', `${mx.toFixed(1)}%`);
-        dom.holoOverlay.style.setProperty('--my', `${my.toFixed(1)}%`);
-        dom.holoOverlay.style.opacity = '1';
-      }
+      targetY = Math.max(-25, Math.min(25,  dGamma * 0.65));
+      targetX = Math.max(-20, Math.min(20, -dBeta  * 0.5));
     });
+
+    tick(); // start the loop
   }
 
   // iOS 13+ needs explicit permission — use a dedicated button so the
