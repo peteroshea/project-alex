@@ -175,6 +175,7 @@ body::before {
 /* ===== 3D CARD SCENE ===== */
 .card-scene {
   perspective: 1400px;
+  transform-style: preserve-3d; /* required so tilt rotation doesn't flatten child flip */
   width: var(--card-w);
   height: var(--card-h);
   cursor: pointer;
@@ -715,12 +716,33 @@ body::before {
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none; /* prevent img from swallowing tap on iOS */
 }
+
+/* Motion permission button (iOS 13+ only) */
+.motion-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 14px;
+  padding: 7px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-b);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.motion-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
 /* ===== COLLECTION LIGHTBOX ===== */
 .coll-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.88);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex; align-items: center; justify-content: center;

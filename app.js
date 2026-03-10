@@ -7,6 +7,7 @@
 // =============================================
 
 const COLL_KEY = 'projectAlex_collection';
+let collCardData = {}; // shared lookup for collection lightbox
 
 // =============================================
 //  RARITIES
@@ -395,7 +396,7 @@ function renderCollection() {
   );
   dom.totalRarities.textContent = sorted.length;
 
-  const cardsByRarity = Object.fromEntries(sorted);
+  collCardData = Object.fromEntries(sorted);
 
   dom.collTiers.innerHTML = sorted.map(([rarity, cards]) => {
     const cfg = getRarity(rarity);
@@ -415,14 +416,6 @@ function renderCollection() {
       </div>
     `;
   }).join('');
-
-  // Attach lightbox clicks
-  dom.collTiers.querySelectorAll('.coll-card').forEach(el => {
-    el.addEventListener('click', () => {
-      const cards = cardsByRarity[el.dataset.rarity];
-      if (cards && window._openCollLightbox) window._openCollLightbox(cards[+el.dataset.idx]);
-    });
-  });
 }
 
 // =============================================
@@ -459,7 +452,8 @@ function setupCollLightbox() {
       ${card.setName || card.set?.name ? `<span class="lb-set">${card.setName || card.set?.name}</span>` : ''}
     `;
     overlay.classList.remove('hidden');
-    requestAnimationFrame(() => overlay.classList.add('open'));
+    // Double rAF: first frame applies display:flex, second triggers the transition (iOS Safari fix)
+    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
     document.body.style.overflow = 'hidden';
   }
 
@@ -473,8 +467,13 @@ function setupCollLightbox() {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
-  // Expose so renderCollection can use it
-  window._openCollLightbox = open;
+  // Event delegation — avoids iOS img-child tap swallowing issue
+  dom.collTiers.addEventListener('click', e => {
+    const el = e.target.closest('.coll-card');
+    if (!el) return;
+    const cards = collCardData[el.dataset.rarity];
+    if (cards) open(cards[+el.dataset.idx]);
+  });
 }
 
 // =============================================
@@ -489,14 +488,19 @@ function setupTilt() {
     window.addEventListener('deviceorientation', e => {
       if (!S.revealed) {
         dom.cardScene.style.transform = '';
+        baseGamma = null; baseBeta = null; // recalibrate on next reveal
         return;
       }
 
-      // Calibrate on first reading
-      if (baseGamma === null) { baseGamma = e.gamma; baseBeta = e.beta; }
+      // e.gamma/beta can be null on some iOS orientations — default to 0
+      const g = e.gamma ?? 0;
+      const b = e.beta  ?? 0;
 
-      const dGamma = (e.gamma  - baseGamma);   // left-right tilt delta
-      const dBeta  = (e.beta   - baseBeta);    // forward-back tilt delta
+      // Calibrate to current hold position on first event after reveal
+      if (baseGamma === null) { baseGamma = g; baseBeta = b; }
+
+      const dGamma = g - baseGamma;
+      const dBeta  = b - baseBeta;
 
       const rotY = Math.max(-22, Math.min(22, dGamma * 0.55));
       const rotX = Math.max(-18, Math.min(18, dBeta  * 0.45));
@@ -505,24 +509,34 @@ function setupTilt() {
 
       // Drive holo overlay with tilt
       if (dom.holoOverlay.classList.contains('active')) {
-        const mx = (50 + dGamma * 1.2).toFixed(1);
-        const my = (50 + dBeta  * 1.0).toFixed(1);
-        dom.holoOverlay.style.setProperty('--mx', `${Math.max(0,Math.min(100,mx))}%`);
-        dom.holoOverlay.style.setProperty('--my', `${Math.max(0,Math.min(100,my))}%`);
+        const mx = Math.max(0, Math.min(100, 50 + dGamma * 1.2));
+        const my = Math.max(0, Math.min(100, 50 + dBeta  * 1.0));
+        dom.holoOverlay.style.setProperty('--mx', `${mx.toFixed(1)}%`);
+        dom.holoOverlay.style.setProperty('--my', `${my.toFixed(1)}%`);
         dom.holoOverlay.style.opacity = '1';
       }
     });
   }
 
-  // iOS 13+ needs permission
+  // iOS 13+ needs explicit permission — use a dedicated button so the
+  // request is always triggered by a direct user gesture (not a card tap)
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    dom.cardScene.addEventListener('click', function askOnce() {
-      DeviceOrientationEvent.requestPermission()
-        .then(state => { if (state === 'granted') startListening(); })
-        .catch(() => {});
-      dom.cardScene.removeEventListener('click', askOnce);
-    }, { once: true });
+    const btn = $('motionBtn');
+    if (btn) {
+      btn.classList.remove('hidden');
+      btn.addEventListener('click', () => {
+        DeviceOrientationEvent.requestPermission()
+          .then(state => {
+            if (state === 'granted') {
+              startListening();
+              btn.classList.add('hidden');
+            }
+          })
+          .catch(() => {});
+      });
+    }
   } else {
+    // Android / desktop — start immediately, no permission needed
     startListening();
   }
 }
