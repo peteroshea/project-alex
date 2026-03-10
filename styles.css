@@ -140,15 +140,15 @@ body::before {
 
 .nav-btn {
   flex: 1;
-  padding: 11px;
+  padding: 6px 10px;
   background: transparent;
   border: none;
   color: var(--text-muted);
   font-family: var(--font-b);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.06em;
-  border-radius: 11px;
+  border-radius: 9px;
   cursor: pointer;
   transition: all 0.25s var(--ease-smooth);
 }
@@ -178,6 +178,7 @@ body::before {
   width: var(--card-w);
   height: var(--card-h);
   cursor: pointer;
+  overflow: visible;
   position: relative;
   flex-shrink: 0;
 }
@@ -695,6 +696,20 @@ body::before {
 .toast.show {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
+}
+
+/* ===== SPARKLE ===== */
+.sparkle-particle {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
+}
+
+@keyframes sparkle-fly {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
 }
 
 /* ===== UTILS ===== */

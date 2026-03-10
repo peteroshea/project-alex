@@ -7,7 +7,6 @@
 // =============================================
 
 const COLL_KEY = 'projectAlex_collection';
-const DATE_KEY = 'projectAlex_lastClaim';
 
 // =============================================
 //  RARITIES
@@ -44,12 +43,10 @@ function getRarity(r) {
 const S = {
   card: null,
   collection: [],
-  lastClaim: null,
   revealed: false,
   loading: false,
-  countdownTimer: null,
-  deck: [],       // shuffled copy of CARDS_DATA
-  nextImg: null,  // preloaded image for next card
+  deck: [],
+  nextImg: null,
 };
 
 // =============================================
@@ -74,9 +71,6 @@ const dom = {
   cardActions:    $('cardActions'),
   claimBtn:       $('claimBtn'),
   skipBtn:        $('skipBtn'),
-  claimedNotice:  $('claimedNotice'),
-  countdown:      $('countdown'),
-  skipBtnClaimed: $('skipBtnClaimed'),
   emptyState:     $('emptyState'),
   collTiers:      $('collectionTiers'),
   totalCards:     $('totalCards'),
@@ -139,7 +133,6 @@ function loadStorage() {
     const raw = localStorage.getItem(COLL_KEY);
     S.collection = raw ? JSON.parse(raw) : [];
   } catch { S.collection = []; }
-  S.lastClaim = localStorage.getItem(DATE_KEY) || null;
 }
 
 function saveStorage() {
@@ -208,7 +201,6 @@ function bindEvents() {
 
   dom.claimBtn.addEventListener('click', claimCard);
   dom.skipBtn.addEventListener('click', drawAnother);
-  dom.skipBtnClaimed.addEventListener('click', drawAnother);
 }
 
 function switchView(view) {
@@ -268,8 +260,9 @@ function flipReveal(card) {
     populateInfo(card);
     dom.cardInfo.classList.remove('hidden');
     showActions();
+    triggerSparkle(card);
     S.loading = false;
-    preloadNext(); // preload next card image while user views current
+    preloadNext();
   }, 550);
 }
 
@@ -277,7 +270,6 @@ function drawAnother() {
   if (S.loading) return;
   dom.cardInfo.classList.add('hidden');
   dom.cardActions.classList.add('hidden');
-  dom.claimedNotice.classList.add('hidden');
 
   S.revealed = false;
   dom.cardInner.classList.remove('revealed');
@@ -315,65 +307,64 @@ function populateInfo(card) {
 }
 
 function showActions() {
-  const canClaim = canClaimToday();
   dom.cardActions.classList.remove('hidden');
-  if (canClaim) {
-    dom.claimBtn.disabled = false;
-    dom.claimBtn.textContent = 'Add to Collection';
-    dom.claimedNotice.classList.add('hidden');
-  } else {
-    dom.claimBtn.disabled = true;
-    dom.claimBtn.textContent = 'Already claimed today';
-    dom.claimedNotice.classList.remove('hidden');
-    startCountdown();
-  }
+  dom.claimBtn.disabled = false;
+  dom.claimBtn.textContent = 'Add to Collection';
 }
 
 // =============================================
 //  CLAIM
 // =============================================
 function claimCard() {
-  if (!S.card || !canClaimToday()) return;
+  if (!S.card) return;
   S.collection.push({ ...S.card, claimedAt: new Date().toISOString() });
-  S.lastClaim = todayStr();
-  localStorage.setItem(DATE_KEY, S.lastClaim);
   saveStorage();
   dom.claimBtn.disabled = true;
   dom.claimBtn.textContent = 'Added ✓';
-  dom.claimedNotice.classList.remove('hidden');
-  startCountdown();
   toast(`${S.card.name} added to your collection!`);
 }
 
 // =============================================
-//  DATE & COUNTDOWN
+//  SPARKLE
 // =============================================
-function todayStr() { return new Date().toISOString().split('T')[0]; }
-function canClaimToday() { return S.lastClaim !== todayStr(); }
+function triggerSparkle(card) {
+  const cfg = getRarity(card.rarity);
+  if (!cfg.holo) return;
 
-function startCountdown() {
-  clearInterval(S.countdownTimer);
-  tick();
-  S.countdownTimer = setInterval(tick, 1000);
-}
+  const container = dom.cardScene;
+  const colors = cfg.tier >= 8
+    ? ['#e879f9','#f0abfc','#fff','#fbbf24','#a78bfa']
+    : cfg.tier >= 7
+    ? ['#f43f5e','#fb923c','#fff','#fbbf24']
+    : cfg.tier >= 5
+    ? ['#f59e0b','#fcd34d','#fff','#60a5fa']
+    : ['#a78bfa','#c4b5fd','#fff','#60a5fa'];
 
-function tick() {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  const diff = midnight - now;
-  if (diff <= 0) {
-    clearInterval(S.countdownTimer);
-    S.lastClaim = null;
-    dom.claimedNotice.classList.add('hidden');
-    dom.claimBtn.disabled = false;
-    dom.claimBtn.textContent = 'Add to Collection';
-    return;
+  const count = cfg.tier >= 7 ? 32 : 20;
+
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'sparkle-particle';
+    const angle = Math.random() * 360;
+    const dist  = 60 + Math.random() * 120;
+    const size  = 3 + Math.random() * 6;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const dur   = 600 + Math.random() * 600;
+    const shape = Math.random() > 0.5 ? '50%' : '2px';
+
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      background:${color};
+      border-radius:${shape};
+      box-shadow: 0 0 ${size*2}px ${color};
+      --tx:${Math.cos(angle * Math.PI/180) * dist}px;
+      --ty:${Math.sin(angle * Math.PI/180) * dist}px;
+      animation: sparkle-fly ${dur}ms ease-out forwards;
+      animation-delay: ${Math.random() * 150}ms;
+    `;
+    container.appendChild(p);
+    setTimeout(() => p.remove(), dur + 200);
   }
-  const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
-  const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-  const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-  dom.countdown.textContent = `${h}:${m}:${s}`;
 }
 
 // =============================================
