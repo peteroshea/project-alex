@@ -12,7 +12,7 @@ import sys
 API = 'https://api.pokemontcg.io/v2/cards'
 FIELDS = 'id,name,images,rarity,set,hp,types'
 PAGE_SIZE = 250
-PAGES = 6  # 6 x 250 = up to 1500 cards
+PAGES = 20  # 20 x 250 = up to 5000 cards
 TIMEOUT = 30
 
 all_cards = []
