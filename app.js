@@ -93,8 +93,10 @@ function init() {
   buildStarfield();
   bindEvents();
   setupHolo();
+  setupTilt();
+  setupCollLightbox();
   buildDeck();
-  preloadNext(); // preload first card image immediately
+  preloadNext();
 }
 
 // =============================================
@@ -393,10 +395,12 @@ function renderCollection() {
   );
   dom.totalRarities.textContent = sorted.length;
 
+  const cardsByRarity = Object.fromEntries(sorted);
+
   dom.collTiers.innerHTML = sorted.map(([rarity, cards]) => {
     const cfg = getRarity(rarity);
-    const cardHtml = cards.map(c => `
-      <div class="coll-card ${cfg.holo ? 'holo' : ''}" title="${c.name}">
+    const cardHtml = cards.map((c, idx) => `
+      <div class="coll-card ${cfg.holo ? 'holo' : ''}" title="${c.name}" data-rarity="${rarity}" data-idx="${idx}">
         <img src="${c.images?.large || c.images?.small || ''}" alt="${c.name}" loading="lazy">
       </div>
     `).join('');
@@ -411,6 +415,14 @@ function renderCollection() {
       </div>
     `;
   }).join('');
+
+  // Attach lightbox clicks
+  dom.collTiers.querySelectorAll('.coll-card').forEach(el => {
+    el.addEventListener('click', () => {
+      const cards = cardsByRarity[el.dataset.rarity];
+      if (cards && window._openCollLightbox) window._openCollLightbox(cards[+el.dataset.idx]);
+    });
+  });
 }
 
 // =============================================
@@ -426,6 +438,93 @@ function toast(msg) {
     dom.toast.classList.remove('show');
     setTimeout(() => dom.toast.classList.add('hidden'), 400);
   }, 3000);
+}
+
+// =============================================
+//  COLLECTION LIGHTBOX
+// =============================================
+function setupCollLightbox() {
+  const overlay  = $('collOverlay');
+  const img      = $('collLbImg');
+  const info     = $('collLbInfo');
+  const closeBtn = $('collLbClose');
+
+  function open(card) {
+    const cfg = getRarity(card.rarity || '');
+    img.src = card.images?.large || card.images?.small || '';
+    img.alt = card.name || '';
+    info.innerHTML = `
+      <div class="lb-name">${card.name || ''}</div>
+      <span class="lb-rarity" style="color:${cfg.color}">${card.rarity || 'Unknown'}</span>
+      ${card.setName || card.set?.name ? `<span class="lb-set">${card.setName || card.set?.name}</span>` : ''}
+    `;
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.classList.add('hidden'), 280);
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+  // Expose so renderCollection can use it
+  window._openCollLightbox = open;
+}
+
+// =============================================
+//  MOBILE TILT
+// =============================================
+function setupTilt() {
+  if (!window.DeviceOrientationEvent) return;
+
+  function startListening() {
+    let baseGamma = null, baseBeta = null;
+
+    window.addEventListener('deviceorientation', e => {
+      if (!S.revealed) {
+        dom.cardScene.style.transform = '';
+        return;
+      }
+
+      // Calibrate on first reading
+      if (baseGamma === null) { baseGamma = e.gamma; baseBeta = e.beta; }
+
+      const dGamma = (e.gamma  - baseGamma);   // left-right tilt delta
+      const dBeta  = (e.beta   - baseBeta);    // forward-back tilt delta
+
+      const rotY = Math.max(-22, Math.min(22, dGamma * 0.55));
+      const rotX = Math.max(-18, Math.min(18, dBeta  * 0.45));
+
+      dom.cardScene.style.transform = `rotateX(${-rotX}deg) rotateY(${rotY}deg)`;
+
+      // Drive holo overlay with tilt
+      if (dom.holoOverlay.classList.contains('active')) {
+        const mx = (50 + dGamma * 1.2).toFixed(1);
+        const my = (50 + dBeta  * 1.0).toFixed(1);
+        dom.holoOverlay.style.setProperty('--mx', `${Math.max(0,Math.min(100,mx))}%`);
+        dom.holoOverlay.style.setProperty('--my', `${Math.max(0,Math.min(100,my))}%`);
+        dom.holoOverlay.style.opacity = '1';
+      }
+    });
+  }
+
+  // iOS 13+ needs permission
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    dom.cardScene.addEventListener('click', function askOnce() {
+      DeviceOrientationEvent.requestPermission()
+        .then(state => { if (state === 'granted') startListening(); })
+        .catch(() => {});
+      dom.cardScene.removeEventListener('click', askOnce);
+    }, { once: true });
+  } else {
+    startListening();
+  }
 }
 
 // =============================================

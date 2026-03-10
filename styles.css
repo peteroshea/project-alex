@@ -717,6 +717,65 @@ body::before {
   display: block;
 }
 
+/* ===== COLLECTION LIGHTBOX ===== */
+.coll-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.28s ease;
+}
+.coll-overlay.open { opacity: 1; }
+
+.coll-lightbox {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 16px;
+  transform: scale(0.88) translateY(20px);
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+}
+.coll-overlay.open .coll-lightbox {
+  transform: scale(1) translateY(0);
+}
+
+.coll-lb-close {
+  position: absolute; top: -12px; right: -12px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); border: none;
+  color: white; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  z-index: 2;
+}
+.coll-lb-close:hover { background: rgba(255,255,255,0.22); }
+
+.coll-lb-img {
+  width: min(72vw, 300px);
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.coll-lb-info {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  text-align: center;
+}
+.lb-name {
+  font-family: var(--font-d);
+  font-size: 18px; font-weight: 700;
+  color: white; letter-spacing: 0.04em;
+}
+.lb-rarity {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.lb-set {
+  font-size: 11px; color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
