@@ -300,6 +300,51 @@ body::before {
   box-shadow:
     0 24px 64px rgba(0,0,0,0.7),
     0 0 40px rgba(91,106,240,0.08);
+  overflow: hidden;
+}
+
+/* Shine sweep on hover */
+.card-front::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%; height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255,255,255,0.04) 30%,
+    rgba(255,255,255,0.32) 50%,
+    rgba(255,255,255,0.04) 70%,
+    transparent 100%
+  );
+  transform: translateX(-160%) skewX(-12deg);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: var(--card-r);
+}
+
+.card-scene:hover .card-inner.revealed .card-front::after {
+  animation: card-shine 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.card-scene:hover .card-inner.revealed .card-front.is-holo::after,
+.card-scene:hover .card-inner.revealed .card-front.is-ultra::after {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(160,100,255,0.06) 20%,
+    rgba(255,220,80,0.18) 35%,
+    rgba(255,255,255,0.55) 50%,
+    rgba(100,200,255,0.18) 65%,
+    rgba(255,100,200,0.06) 80%,
+    transparent 100%
+  );
+  animation: card-shine 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes card-shine {
+  0%   { transform: translateX(-160%) skewX(-12deg); }
+  100% { transform: translateX(290%) skewX(-12deg); }
 }
 
 .card-front.is-holo {
