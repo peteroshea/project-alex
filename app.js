@@ -340,27 +340,27 @@ function triggerSparkle(card) {
     ? ['#f59e0b','#fcd34d','#fff','#60a5fa']
     : ['#a78bfa','#c4b5fd','#fff','#60a5fa'];
 
-  const count = cfg.tier >= 7 ? 32 : 20;
+  const count = cfg.tier >= 7 ? 55 : 38;
 
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
     p.className = 'sparkle-particle';
     const angle = Math.random() * 360;
-    const dist  = 60 + Math.random() * 120;
-    const size  = 3 + Math.random() * 6;
+    const dist  = 120 + Math.random() * 220;
+    const size  = 5 + Math.random() * 12;
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const dur   = 600 + Math.random() * 600;
+    const dur   = 800 + Math.random() * 700;
     const shape = Math.random() > 0.5 ? '50%' : '2px';
 
     p.style.cssText = `
       width:${size}px; height:${size}px;
       background:${color};
       border-radius:${shape};
-      box-shadow: 0 0 ${size*2}px ${color};
+      box-shadow: 0 0 ${size*3}px ${size}px ${color}88;
       --tx:${Math.cos(angle * Math.PI/180) * dist}px;
       --ty:${Math.sin(angle * Math.PI/180) * dist}px;
       animation: sparkle-fly ${dur}ms ease-out forwards;
-      animation-delay: ${Math.random() * 150}ms;
+      animation-delay: ${Math.random() * 200}ms;
     `;
     container.appendChild(p);
     setTimeout(() => p.remove(), dur + 200);
