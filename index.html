@@ -118,8 +118,16 @@
   <div class="coll-overlay hidden" id="collOverlay">
     <div class="coll-lightbox" id="collLightbox">
       <button class="coll-lb-close" id="collLbClose">✕</button>
-      <img class="coll-lb-img" id="collLbImg" src="" alt="">
+      <div class="coll-lb-nav-row">
+        <button class="coll-lb-arrow" id="collLbPrev">‹</button>
+        <img class="coll-lb-img" id="collLbImg" src="" alt="">
+        <button class="coll-lb-arrow" id="collLbNext">›</button>
+      </div>
       <div class="coll-lb-info" id="collLbInfo"></div>
+      <div class="coll-lb-footer">
+        <span class="coll-lb-counter" id="collLbCounter"></span>
+        <button class="coll-lb-remove" id="collLbRemove">Remove</button>
+      </div>
     </div>
   </div>
 

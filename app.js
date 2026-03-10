@@ -7,7 +7,9 @@
 // =============================================
 
 const COLL_KEY = 'projectAlex_collection';
-let collCardData = {}; // shared lookup for collection lightbox
+let collCardData = {};  // rarity → cards lookup for renderCollection delegation
+let collFlatList = [];  // ordered flat array for lightbox navigation
+let collCurrentIdx = 0;
 
 // =============================================
 //  RARITIES
@@ -436,23 +438,60 @@ function toast(msg) {
 // =============================================
 //  COLLECTION LIGHTBOX
 // =============================================
-function setupCollLightbox() {
-  const overlay  = $('collOverlay');
-  const img      = $('collLbImg');
-  const info     = $('collLbInfo');
-  const closeBtn = $('collLbClose');
+function buildCollFlatList() {
+  const groups = {};
+  S.collection.forEach((card, collIdx) => {
+    const r = card.rarity || 'Unknown';
+    if (!groups[r]) groups[r] = [];
+    groups[r].push({ card, collIdx });
+  });
+  const sorted = Object.entries(groups).sort((a, b) =>
+    getRarity(b[0]).tier - getRarity(a[0]).tier
+  );
+  collFlatList = sorted.flatMap(([, items]) => items);
+}
 
-  function open(card) {
-    const cfg = getRarity(card.rarity || '');
-    img.src = card.images?.large || card.images?.small || '';
-    img.alt = card.name || '';
+function setupCollLightbox() {
+  const overlay   = $('collOverlay');
+  const img       = $('collLbImg');
+  const info      = $('collLbInfo');
+  const counter   = $('collLbCounter');
+  const closeBtn  = $('collLbClose');
+  const prevBtn   = $('collLbPrev');
+  const nextBtn   = $('collLbNext');
+  const removeBtn = $('collLbRemove');
+
+  function renderCard() {
+    const item = collFlatList[collCurrentIdx];
+    if (!item) { close(); return; }
+    const card = item.card;
+    const cfg  = getRarity(card.rarity || '');
+
+    img.classList.add('lb-transitioning');
+    setTimeout(() => {
+      img.src = card.images?.large || card.images?.small || '';
+      img.alt = card.name || '';
+      img.classList.remove('lb-transitioning');
+    }, 120);
+
     info.innerHTML = `
       <div class="lb-name">${card.name || ''}</div>
       <span class="lb-rarity" style="color:${cfg.color}">${card.rarity || 'Unknown'}</span>
       ${card.setName || card.set?.name ? `<span class="lb-set">${card.setName || card.set?.name}</span>` : ''}
     `;
+    counter.textContent = `${collCurrentIdx + 1} / ${collFlatList.length}`;
+    prevBtn.disabled = collCurrentIdx === 0;
+    nextBtn.disabled = collCurrentIdx === collFlatList.length - 1;
+  }
+
+  function open(card) {
+    buildCollFlatList();
+    collCurrentIdx = collFlatList.findIndex(
+      item => item.card.claimedAt === card.claimedAt && item.card.id === card.id
+    );
+    if (collCurrentIdx === -1) collCurrentIdx = 0;
+    renderCard();
     overlay.classList.remove('hidden');
-    // Double rAF: first frame applies display:flex, second triggers the transition (iOS Safari fix)
     requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
     document.body.style.overflow = 'hidden';
   }
@@ -463,11 +502,43 @@ function setupCollLightbox() {
     document.body.style.overflow = '';
   }
 
+  function goNext() { if (collCurrentIdx < collFlatList.length - 1) { collCurrentIdx++; renderCard(); } }
+  function goPrev() { if (collCurrentIdx > 0) { collCurrentIdx--; renderCard(); } }
+
+  function removeCard() {
+    const item = collFlatList[collCurrentIdx];
+    if (!item) return;
+    S.collection.splice(item.collIdx, 1);
+    saveStorage();
+    buildCollFlatList();
+    if (collFlatList.length === 0) { close(); renderCollection(); return; }
+    collCurrentIdx = Math.min(collCurrentIdx, collFlatList.length - 1);
+    renderCard();
+    renderCollection();
+  }
+
+  prevBtn.addEventListener('click', goPrev);
+  nextBtn.addEventListener('click', goNext);
+  removeBtn.addEventListener('click', removeCard);
   closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', e => {
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape')      close();
+    if (e.key === 'ArrowRight')  goNext();
+    if (e.key === 'ArrowLeft')   goPrev();
+  });
 
-  // Event delegation — avoids iOS img-child tap swallowing issue
+  // Swipe support
+  let swipeStartX = 0;
+  const lb = $('collLightbox');
+  lb.addEventListener('touchstart', e => { swipeStartX = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    if (Math.abs(dx) > 45) { dx < 0 ? goNext() : goPrev(); }
+  }, { passive: true });
+
+  // Event delegation
   dom.collTiers.addEventListener('click', e => {
     const el = e.target.closest('.coll-card');
     if (!el) return;

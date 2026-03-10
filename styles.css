@@ -798,6 +798,60 @@ body::before {
   letter-spacing: 0.08em;
 }
 
+.coll-lb-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coll-lb-arrow {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.coll-lb-arrow:hover { background: rgba(255,255,255,0.18); }
+.coll-lb-arrow:disabled { opacity: 0.22; cursor: not-allowed; }
+
+.coll-lb-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 4px;
+  gap: 12px;
+}
+
+.coll-lb-counter {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.coll-lb-remove {
+  background: transparent;
+  border: 1px solid rgba(244,63,94,0.35);
+  color: var(--pink);
+  font-family: var(--font-b);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.coll-lb-remove:hover { background: rgba(244,63,94,0.12); border-color: rgba(244,63,94,0.6); }
+
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
