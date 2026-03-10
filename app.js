@@ -340,7 +340,7 @@ function triggerSparkle(card) {
     ? ['#f59e0b','#fcd34d','#fff','#60a5fa']
     : ['#a78bfa','#c4b5fd','#fff','#60a5fa'];
 
-  const count = cfg.tier >= 7 ? 55 : 38;
+  const count = cfg.tier >= 7 ? 120 : 80;
 
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
@@ -360,7 +360,7 @@ function triggerSparkle(card) {
       --tx:${Math.cos(angle * Math.PI/180) * dist}px;
       --ty:${Math.sin(angle * Math.PI/180) * dist}px;
       animation: sparkle-fly ${dur}ms ease-out forwards;
-      animation-delay: ${Math.random() * 200}ms;
+      animation-delay: ${Math.random() * 400}ms;
     `;
     container.appendChild(p);
     setTimeout(() => p.remove(), dur + 200);
