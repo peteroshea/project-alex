@@ -314,39 +314,64 @@ function populateInfo(card) {
 }
 
 let ttsAudio = null;
+let _audioCtx = null;
 
-function speakCardName() {
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+// Synthesize ascending Pokédex scan beeps using oscillators
+function playPokedexScan() {
+  return new Promise(resolve => {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // C5 → E5 → G5 → C6 ascending square-wave arpeggio
+    [[523, 0], [659, 0.08], [784, 0.16], [1047, 0.24]].forEach(([freq, t]) => {
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      env.gain.setValueAtTime(0, now + t);
+      env.gain.linearRampToValueAtTime(0.07, now + t + 0.005);
+      env.gain.exponentialRampToValueAtTime(0.001, now + t + 0.065);
+      osc.connect(env);
+      env.connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + 0.07);
+    });
+    setTimeout(resolve, 400);
+  });
+}
+
+async function speakCardName() {
   if (!S.card) return;
   const name = S.card.name || 'Unknown';
   dom.ttsBtn.classList.add('tts-speaking');
 
-  // Stop any currently playing audio
   if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-  // Try Google Translate TTS (natural-sounding voice, no API key needed)
+  // Play Pokédex scan beep, then voice
+  await playPokedexScan();
+
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(name)}&tl=en&client=tw-ob`;
   ttsAudio = new Audio(url);
-  ttsAudio.onended  = () => { dom.ttsBtn.classList.remove('tts-speaking'); ttsAudio = null; };
-  ttsAudio.onerror  = () => {
-    // Fallback: Web Speech API with best available voice
-    ttsAudio = null;
-    speakFallback(name);
-  };
+  ttsAudio.onended = () => { dom.ttsBtn.classList.remove('tts-speaking'); ttsAudio = null; };
+  ttsAudio.onerror = () => { ttsAudio = null; speakFallback(name); };
   ttsAudio.play().catch(() => speakFallback(name));
 }
 
 function speakFallback(name) {
   if (!window.speechSynthesis) { dom.ttsBtn.classList.remove('tts-speaking'); return; }
   const utt = new SpeechSynthesisUtterance(name);
+  utt.pitch = 0.8;
   utt.rate = 0.88;
-  utt.pitch = 1.05;
-  // Prefer high-quality voices: Google Neural > Apple Enhanced > default
   const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(v => /google.*english/i.test(v.name))
+  const preferred = voices.find(v => /google.*uk.*male/i.test(v.name))
     || voices.find(v => /google/i.test(v.name) && v.lang.startsWith('en'))
-    || voices.find(v => /(enhanced|premium|daniel|samantha|karen|moira)/i.test(v.name))
-    || voices.find(v => v.lang === 'en-US' && !v.localService)
+    || voices.find(v => /(enhanced|premium|daniel)/i.test(v.name))
     || voices.find(v => v.lang.startsWith('en'));
   if (preferred) utt.voice = preferred;
   utt.onend  = () => dom.ttsBtn.classList.remove('tts-speaking');
