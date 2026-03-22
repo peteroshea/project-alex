@@ -322,26 +322,21 @@ function getAudioCtx() {
   return _audioCtx;
 }
 
-// Synthesize ascending Pokédex scan beeps using oscillators
-function playPokedexScan() {
-  return new Promise(resolve => {
-    const ctx = getAudioCtx();
-    const now = ctx.currentTime;
-    // C5 → E5 → G5 → C6 ascending square-wave arpeggio
-    [[523, 0], [659, 0.08], [784, 0.16], [1047, 0.24]].forEach(([freq, t]) => {
-      const osc = ctx.createOscillator();
-      const env = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      env.gain.setValueAtTime(0, now + t);
-      env.gain.linearRampToValueAtTime(0.07, now + t + 0.005);
-      env.gain.exponentialRampToValueAtTime(0.001, now + t + 0.065);
-      osc.connect(env);
-      env.connect(ctx.destination);
-      osc.start(now + t);
-      osc.stop(now + t + 0.07);
-    });
-    setTimeout(resolve, 400);
+// Schedule ascending Pokédex scan beeps via AudioContext (synchronous — no await needed)
+function schedulePokedexBeep(ctx) {
+  const now = ctx.currentTime;
+  [[523, 0], [659, 0.08], [784, 0.16], [1047, 0.24]].forEach(([freq, t]) => {
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    env.gain.setValueAtTime(0, now + t);
+    env.gain.linearRampToValueAtTime(0.07, now + t + 0.005);
+    env.gain.exponentialRampToValueAtTime(0.001, now + t + 0.065);
+    osc.connect(env);
+    env.connect(ctx.destination);
+    osc.start(now + t);
+    osc.stop(now + t + 0.07);
   });
 }
 
@@ -350,18 +345,38 @@ function speakCardName() {
   speakWithPokedexEffect(S.card.name || 'Unknown', dom.ttsBtn);
 }
 
-async function speakWithPokedexEffect(name, btn) {
+// iOS Safari fix: audio.play() MUST be called synchronously within a user gesture.
+// Using async/await breaks this. Instead we:
+//   1. Resume AudioContext synchronously (within gesture)
+//   2. Schedule beep oscillators synchronously
+//   3. Call audio.play() immediately to unlock the element on iOS, then pause
+//   4. Use setTimeout to replay after the beep — works because element is now unlocked
+function speakWithPokedexEffect(name, btn) {
   if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-
   btn.classList.add('tts-speaking');
-  await playPokedexScan();
+
+  const ctx = getAudioCtx(); // resume within gesture
 
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(name)}&tl=en&client=tw-ob`;
-  ttsAudio = new Audio(url);
-  ttsAudio.onended = () => { btn.classList.remove('tts-speaking'); ttsAudio = null; };
-  ttsAudio.onerror = () => { ttsAudio = null; speakFallback(name, btn); };
-  ttsAudio.play().catch(() => speakFallback(name, btn));
+  const audio = new Audio(url);
+  ttsAudio = audio;
+
+  // Unlock the audio element within the user gesture (iOS Safari requirement).
+  // Calling play() here registers it as user-initiated; we immediately pause
+  // so it doesn't audibly play yet. After the beep, play() will work anywhere.
+  const unlock = audio.play();
+  if (unlock) unlock.then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+
+  schedulePokedexBeep(ctx); // synchronous — beeps play at scheduled times
+
+  setTimeout(() => {
+    if (ttsAudio !== audio) return; // cancelled in the meantime
+    audio.currentTime = 0;
+    audio.onended = () => { btn.classList.remove('tts-speaking'); ttsAudio = null; };
+    audio.onerror = () => { ttsAudio = null; speakFallback(name, btn); };
+    audio.play().catch(() => speakFallback(name, btn));
+  }, 430); // slightly after the 4th beep (~310ms) to avoid overlap
 }
 
 function speakFallback(name, btn) {
