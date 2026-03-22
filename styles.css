@@ -472,12 +472,43 @@ body::before {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.card-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .card-name {
   font-family: var(--font-d);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  margin-bottom: 8px;
+}
+
+.tts-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.tts-btn:hover { background: rgba(255,255,255,0.14); }
+.tts-btn:active { transform: scale(0.9); }
+.tts-btn.tts-speaking {
+  background: rgba(91,106,240,0.25);
+  border-color: var(--accent);
+  animation: tts-pulse 0.8s ease-in-out infinite;
+}
+@keyframes tts-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 0 6px transparent; }
 }
 
 .card-meta {

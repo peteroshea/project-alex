@@ -79,6 +79,7 @@ const dom = {
   totalCards:     $('totalCards'),
   totalRarities:  $('totalRarities'),
   toast:          $('toast'),
+  ttsBtn:         $('ttsBtn'),
   drawView:       $('drawView'),
   collView:       $('collectionView'),
   navBtns:        document.querySelectorAll('.nav-btn'),
@@ -206,6 +207,7 @@ function bindEvents() {
 
   dom.claimBtn.addEventListener('click', claimCard);
   dom.skipBtn.addEventListener('click', drawAnother);
+  dom.ttsBtn.addEventListener('click', speakCardName);
 }
 
 function switchView(view) {
@@ -309,6 +311,17 @@ function populateInfo(card) {
   dom.setName.textContent = card.setName || card.set?.name || '';
   dom.cardType.textContent = card.types?.length ? `⚡ ${card.types.join(' / ')}` : '';
   dom.cardHp.textContent = card.hp ? `${card.hp} HP` : '';
+}
+
+function speakCardName() {
+  if (!window.speechSynthesis || !S.card) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(S.card.name || 'Unknown');
+  utt.rate = 0.95;
+  dom.ttsBtn.classList.add('tts-speaking');
+  utt.onend = () => dom.ttsBtn.classList.remove('tts-speaking');
+  utt.onerror = () => dom.ttsBtn.classList.remove('tts-speaking');
+  window.speechSynthesis.speak(utt);
 }
 
 function showActions() {
