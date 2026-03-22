@@ -8,25 +8,34 @@ import requests
 import json
 import time
 import sys
+import math
 
 API = 'https://api.pokemontcg.io/v2/cards'
 FIELDS = 'id,name,images,rarity,set,hp,types'
 PAGE_SIZE = 250
-PAGES = 20  # 20 x 250 = up to 5000 cards
 TIMEOUT = 30
 
 all_cards = []
+total_pages = None
+page = 1
 
-for page in range(1, PAGES + 1):
-    print(f'Fetching page {page}/{PAGES}...', end=' ', flush=True)
+while True:
+    label = f'{page}/{total_pages}' if total_pages else page
+    print(f'Fetching page {label}...', end=' ', flush=True)
     for attempt in range(3):
         try:
-            # Build URL manually to avoid commas being URL-encoded in select param
             url = f'{API}?pageSize={PAGE_SIZE}&page={page}&select={FIELDS}'
             r = requests.get(url, timeout=TIMEOUT)
             r.raise_for_status()
-            cards = r.json().get('data', [])
-            # Only keep cards with a large image
+            payload = r.json()
+
+            # On first page, compute total pages from totalCount
+            if total_pages is None:
+                total_count = payload.get('totalCount', 0)
+                total_pages = math.ceil(total_count / PAGE_SIZE)
+                print(f'({total_count} total cards, {total_pages} pages)', end=' ', flush=True)
+
+            cards = payload.get('data', [])
             valid = [
                 {
                     'id': c['id'],
@@ -50,6 +59,9 @@ for page in range(1, PAGES + 1):
     else:
         print(f'Skipping page {page} after 3 failed attempts')
 
+    if total_pages and page >= total_pages:
+        break
+    page += 1
     time.sleep(0.3)
 
 if not all_cards:
