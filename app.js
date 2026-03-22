@@ -14,6 +14,13 @@ let collCurrentIdx = 0;
 // =============================================
 //  RARITIES
 // =============================================
+//  ANALYTICS
+// =============================================
+function ga(event, params = {}) {
+  if (typeof gtag === 'function') gtag('event', event, params);
+}
+
+// =============================================
 //  TYPE ICONS
 // =============================================
 const TYPE_ICON = {
@@ -242,7 +249,7 @@ function switchView(view) {
   dom.navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === view));
   dom.drawView.classList.toggle('active', view === 'draw');
   dom.collView.classList.toggle('active', view === 'collection');
-  if (view === 'collection') renderCollection();
+  if (view === 'collection') { renderCollection(); ga('collection_viewed'); }
 }
 
 // =============================================
@@ -291,6 +298,7 @@ function flipReveal(card) {
   applyRarityStyle(card);
   S.revealed = true;
   dom.cardInner.classList.add('revealed');
+  ga('card_revealed', { card_name: card.name, rarity: card.rarity || 'Unknown', set_name: card.setName || '' });
   setTimeout(() => {
     populateInfo(card);
     dom.cardInfo.classList.remove('hidden');
@@ -303,6 +311,7 @@ function flipReveal(card) {
 
 function drawAnother() {
   if (S.loading) return;
+  if (S.card) ga('card_skipped', { card_name: S.card.name, rarity: S.card.rarity || 'Unknown' });
   dom.cardInfo.classList.add('hidden');
   dom.cardActions.classList.add('hidden');
 
@@ -372,6 +381,7 @@ function schedulePokedexBeep(ctx) {
 
 function speakCardName() {
   if (!S.card) return;
+  ga('tts_played', { card_name: S.card.name, rarity: S.card.rarity || 'Unknown' });
   speakWithPokedexEffect(S.card.name || 'Unknown', dom.ttsBtn);
 }
 
@@ -456,6 +466,7 @@ function claimCard() {
   dom.claimBtn.disabled = true;
   dom.claimBtn.textContent = 'Added ✓';
   toast(`${S.card.name} added to your collection!`);
+  ga('card_claimed', { card_name: S.card.name, rarity: S.card.rarity || 'Unknown', set_name: S.card.setName || '' });
 }
 
 // =============================================
@@ -622,6 +633,7 @@ function setupCollLightbox() {
       item => item.card.claimedAt === card.claimedAt && item.card.id === card.id
     );
     if (collCurrentIdx === -1) collCurrentIdx = 0;
+    ga('lightbox_opened', { card_name: card.name, rarity: card.rarity || 'Unknown' });
     renderCard();
     overlay.classList.remove('hidden');
     requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
@@ -640,6 +652,7 @@ function setupCollLightbox() {
   function removeCard() {
     const item = collFlatList[collCurrentIdx];
     if (!item) return;
+    ga('card_removed', { card_name: item.card.name, rarity: item.card.rarity || 'Unknown' });
     S.collection.splice(item.collIdx, 1);
     saveStorage();
     buildCollFlatList();
@@ -767,6 +780,7 @@ function setupTilt() {
             if (state === 'granted') {
               startListening();
               btn.classList.add('hidden');
+              ga('tilt_enabled');
             }
           })
           .catch(() => {});
