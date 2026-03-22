@@ -250,17 +250,17 @@
       statusEl.textContent = '';
       statusEl.className = 'feedback-status';
 
+      var params = new URLSearchParams({
+        rating: selectedRating || '',
+        feedback: msg,
+        email: emailEl.value.trim() || '',
+        page: location.href,
+        timestamp: new Date().toISOString()
+      });
       fetch(SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rating: selectedRating || '',
-          feedback: msg,
-          email: emailEl.value.trim() || '',
-          page: location.href,
-          timestamp: new Date().toISOString()
-        })
+        body: params
       }).then(function() {
         statusEl.textContent = 'Thanks! Feedback sent. ✓';
         statusEl.className = 'feedback-status success';
