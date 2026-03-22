@@ -159,7 +159,132 @@
 
   <div class="toast hidden" id="toast"></div>
 
+  <!-- Feedback Widget -->
+  <button class="feedback-fab" id="feedbackFab" aria-label="Send feedback">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  </button>
+
+  <div class="feedback-popup" id="feedbackPopup" role="dialog" aria-modal="true" aria-label="Feedback">
+    <div class="feedback-popup-header">
+      <span>Send Feedback</span>
+      <button class="feedback-close" id="feedbackClose" aria-label="Close">✕</button>
+    </div>
+    <div class="feedback-popup-body">
+      <p class="feedback-hint">Bug, suggestion, or just want to say hi? Let me know!</p>
+      <div class="feedback-rating-group">
+        <span class="feedback-rating-label">How fun is the app?</span>
+        <div class="feedback-stars" id="feedbackStars">
+          <button type="button" class="star-btn" data-value="1">1</button>
+          <button type="button" class="star-btn" data-value="2">2</button>
+          <button type="button" class="star-btn" data-value="3">3</button>
+          <button type="button" class="star-btn" data-value="4">4</button>
+          <button type="button" class="star-btn" data-value="5">5</button>
+        </div>
+        <span class="feedback-rating-hint" id="ratingHint">Tap to rate</span>
+      </div>
+      <textarea id="feedbackText" placeholder="Your feedback..." rows="3" maxlength="1000"></textarea>
+      <input type="email" id="feedbackEmail" class="feedback-email" placeholder="Email (optional)" autocomplete="email">
+      <div class="feedback-footer">
+        <span class="feedback-char" id="feedbackChar">0 / 1000</span>
+        <button class="feedback-submit" id="feedbackSubmit">Send</button>
+      </div>
+      <p class="feedback-status" id="feedbackStatus"></p>
+    </div>
+  </div>
+
   <script src="cards-data.js"></script>
   <script src="app.js"></script>
+  <script>
+  (function() {
+    var SHEET_URL = 'https://script.google.com/macros/s/AKfycbwQCQ0s0clrB62Zy-noG8tBYJh0yU3DTHlSFUlGrJ4MHWNRM7Cspdqiy9AU2zv2K5Ph/exec';
+
+    var fab          = document.getElementById('feedbackFab');
+    var popup        = document.getElementById('feedbackPopup');
+    var closeBtn     = document.getElementById('feedbackClose');
+    var textarea     = document.getElementById('feedbackText');
+    var emailEl      = document.getElementById('feedbackEmail');
+    var charEl       = document.getElementById('feedbackChar');
+    var submitBtn    = document.getElementById('feedbackSubmit');
+    var statusEl     = document.getElementById('feedbackStatus');
+    var starsEl      = document.getElementById('feedbackStars');
+    var ratingHint   = document.getElementById('ratingHint');
+    var selectedRating = 0;
+    var ratingLabels = ['','Boring','OK','Fun','Really fun','Addictive!'];
+
+    starsEl.addEventListener('click', function(e) {
+      var btn = e.target.closest('.star-btn');
+      if (!btn) return;
+      selectedRating = parseInt(btn.dataset.value);
+      starsEl.querySelectorAll('.star-btn').forEach(function(b) {
+        b.classList.toggle('selected', parseInt(b.dataset.value) <= selectedRating);
+      });
+      ratingHint.textContent = selectedRating + ' — ' + ratingLabels[selectedRating];
+    });
+
+    fab.addEventListener('click', function() {
+      var isOpen = popup.classList.toggle('open');
+      fab.classList.toggle('active', isOpen);
+      if (isOpen) setTimeout(function() { textarea.focus(); }, 50);
+    });
+
+    closeBtn.addEventListener('click', function() {
+      popup.classList.remove('open');
+      fab.classList.remove('active');
+    });
+
+    textarea.addEventListener('input', function() {
+      charEl.textContent = textarea.value.length + ' / 1000';
+    });
+
+    submitBtn.addEventListener('click', function() {
+      var msg = textarea.value.trim();
+      if (!msg && !selectedRating) {
+        statusEl.textContent = 'Please add a rating or message.';
+        statusEl.className = 'feedback-status error';
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      statusEl.textContent = '';
+      statusEl.className = 'feedback-status';
+
+      fetch(SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: selectedRating || '',
+          feedback: msg,
+          email: emailEl.value.trim() || '',
+          page: location.href,
+          timestamp: new Date().toISOString()
+        })
+      }).then(function() {
+        statusEl.textContent = 'Thanks! Feedback sent. ✓';
+        statusEl.className = 'feedback-status success';
+        textarea.value = ''; emailEl.value = '';
+        charEl.textContent = '0 / 1000';
+        selectedRating = 0;
+        starsEl.querySelectorAll('.star-btn').forEach(function(b) { b.classList.remove('selected'); });
+        ratingHint.textContent = 'Tap to rate';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+        setTimeout(function() {
+          popup.classList.remove('open');
+          fab.classList.remove('active');
+          statusEl.textContent = '';
+          statusEl.className = 'feedback-status';
+        }, 2000);
+      }).catch(function() {
+        statusEl.textContent = 'Something went wrong. Try again.';
+        statusEl.className = 'feedback-status error';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+      });
+    });
+  })();
+  </script>
 </body>
 </html>
