@@ -14,6 +14,34 @@ let collCurrentIdx = 0;
 // =============================================
 //  RARITIES
 // =============================================
+//  TYPE ICONS
+// =============================================
+const TYPE_ICON = {
+  'Fire':       '🔥',
+  'Water':      '💧',
+  'Grass':      '🌿',
+  'Electric':   '⚡',
+  'Psychic':    '🔮',
+  'Ice':        '❄️',
+  'Dragon':     '🐉',
+  'Dark':       '🌑',
+  'Fairy':      '🌸',
+  'Fighting':   '👊',
+  'Flying':     '🌬️',
+  'Poison':     '☠️',
+  'Ground':     '🏔️',
+  'Rock':       '🪨',
+  'Bug':        '🐛',
+  'Ghost':      '👻',
+  'Steel':      '⚙️',
+  'Normal':     '⭕',
+  'Colorless':  '⭕',
+  'Metal':      '⚙️',
+  'Darkness':   '🌑',
+  'Lightning':  '⚡',
+};
+
+// =============================================
 const RARITIES = {
   'Common':                    { tier: 1, color: '#9ca3af', holo: false },
   'Uncommon':                  { tier: 2, color: '#4ade80', holo: false },
@@ -309,7 +337,9 @@ function populateInfo(card) {
   dom.rarityBadge.textContent = rarity || 'Unknown';
   dom.rarityBadge.className = 'rarity-badge' + (cfg.holo ? ' gold' : '');
   dom.setName.textContent = card.setName || card.set?.name || '';
-  dom.cardType.textContent = card.types?.length ? `⚡ ${card.types.join(' / ')}` : '';
+  dom.cardType.textContent = card.types?.length
+    ? card.types.map(t => `${TYPE_ICON[t] || '◆'} ${t}`).join(' · ')
+    : '';
   dom.cardHp.textContent = card.hp ? `${card.hp} HP` : '';
 }
 
