@@ -345,26 +345,27 @@ function playPokedexScan() {
   });
 }
 
-async function speakCardName() {
+function speakCardName() {
   if (!S.card) return;
-  const name = S.card.name || 'Unknown';
-  dom.ttsBtn.classList.add('tts-speaking');
+  speakWithPokedexEffect(S.card.name || 'Unknown', dom.ttsBtn);
+}
 
+async function speakWithPokedexEffect(name, btn) {
   if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-  // Play Pokédex scan beep, then voice
+  btn.classList.add('tts-speaking');
   await playPokedexScan();
 
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(name)}&tl=en&client=tw-ob`;
   ttsAudio = new Audio(url);
-  ttsAudio.onended = () => { dom.ttsBtn.classList.remove('tts-speaking'); ttsAudio = null; };
-  ttsAudio.onerror = () => { ttsAudio = null; speakFallback(name); };
-  ttsAudio.play().catch(() => speakFallback(name));
+  ttsAudio.onended = () => { btn.classList.remove('tts-speaking'); ttsAudio = null; };
+  ttsAudio.onerror = () => { ttsAudio = null; speakFallback(name, btn); };
+  ttsAudio.play().catch(() => speakFallback(name, btn));
 }
 
-function speakFallback(name) {
-  if (!window.speechSynthesis) { dom.ttsBtn.classList.remove('tts-speaking'); return; }
+function speakFallback(name, btn) {
+  if (!window.speechSynthesis) { btn.classList.remove('tts-speaking'); return; }
   const utt = new SpeechSynthesisUtterance(name);
   utt.pitch = 0.8;
   utt.rate = 0.88;
@@ -374,8 +375,8 @@ function speakFallback(name) {
     || voices.find(v => /(enhanced|premium|daniel)/i.test(v.name))
     || voices.find(v => v.lang.startsWith('en'));
   if (preferred) utt.voice = preferred;
-  utt.onend  = () => dom.ttsBtn.classList.remove('tts-speaking');
-  utt.onerror = () => dom.ttsBtn.classList.remove('tts-speaking');
+  utt.onend  = () => btn.classList.remove('tts-speaking');
+  utt.onerror = () => btn.classList.remove('tts-speaking');
   window.speechSynthesis.speak(utt);
 }
 
@@ -543,7 +544,10 @@ function setupCollLightbox() {
     }, 120);
 
     info.innerHTML = `
-      <div class="lb-name">${card.name || ''}</div>
+      <div class="lb-name-row">
+        <div class="lb-name">${card.name || ''}</div>
+        <button class="tts-btn lb-tts-btn" title="Read name aloud">🔊</button>
+      </div>
       <span class="lb-rarity" style="color:${cfg.color}">${card.rarity || 'Unknown'}</span>
       ${card.setName || card.set?.name ? `<span class="lb-set">${card.setName || card.set?.name}</span>` : ''}
     `;
@@ -588,6 +592,14 @@ function setupCollLightbox() {
   prevBtn.addEventListener('click', goPrev);
   nextBtn.addEventListener('click', goNext);
   removeBtn.addEventListener('click', removeCard);
+  info.addEventListener('click', e => {
+    if (e.target.closest('.lb-tts-btn')) {
+      const item = collFlatList[collCurrentIdx];
+      if (!item) return;
+      const btn = e.target.closest('.lb-tts-btn');
+      speakWithPokedexEffect(item.card.name || 'Unknown', btn);
+    }
+  });
   closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', e => {

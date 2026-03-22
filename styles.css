@@ -815,6 +815,13 @@ body::before {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   text-align: center;
 }
+.lb-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .lb-name {
   font-family: var(--font-d);
   font-size: 18px; font-weight: 700;
