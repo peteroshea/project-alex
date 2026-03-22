@@ -313,13 +313,43 @@ function populateInfo(card) {
   dom.cardHp.textContent = card.hp ? `${card.hp} HP` : '';
 }
 
+let ttsAudio = null;
+
 function speakCardName() {
-  if (!window.speechSynthesis || !S.card) return;
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(S.card.name || 'Unknown');
-  utt.rate = 0.95;
+  if (!S.card) return;
+  const name = S.card.name || 'Unknown';
   dom.ttsBtn.classList.add('tts-speaking');
-  utt.onend = () => dom.ttsBtn.classList.remove('tts-speaking');
+
+  // Stop any currently playing audio
+  if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  // Try Google Translate TTS (natural-sounding voice, no API key needed)
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(name)}&tl=en&client=tw-ob`;
+  ttsAudio = new Audio(url);
+  ttsAudio.onended  = () => { dom.ttsBtn.classList.remove('tts-speaking'); ttsAudio = null; };
+  ttsAudio.onerror  = () => {
+    // Fallback: Web Speech API with best available voice
+    ttsAudio = null;
+    speakFallback(name);
+  };
+  ttsAudio.play().catch(() => speakFallback(name));
+}
+
+function speakFallback(name) {
+  if (!window.speechSynthesis) { dom.ttsBtn.classList.remove('tts-speaking'); return; }
+  const utt = new SpeechSynthesisUtterance(name);
+  utt.rate = 0.88;
+  utt.pitch = 1.05;
+  // Prefer high-quality voices: Google Neural > Apple Enhanced > default
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v => /google.*english/i.test(v.name))
+    || voices.find(v => /google/i.test(v.name) && v.lang.startsWith('en'))
+    || voices.find(v => /(enhanced|premium|daniel|samantha|karen|moira)/i.test(v.name))
+    || voices.find(v => v.lang === 'en-US' && !v.localService)
+    || voices.find(v => v.lang.startsWith('en'));
+  if (preferred) utt.voice = preferred;
+  utt.onend  = () => dom.ttsBtn.classList.remove('tts-speaking');
   utt.onerror = () => dom.ttsBtn.classList.remove('tts-speaking');
   window.speechSynthesis.speak(utt);
 }
