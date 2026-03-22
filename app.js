@@ -351,9 +351,15 @@ function speakCardName() {
 //   2. Schedule beep oscillators synchronously
 //   3. Call audio.play() immediately to unlock the element on iOS, then pause
 //   4. Use setTimeout to replay after the beep — works because element is now unlocked
-function speakWithPokedexEffect(name, btn) {
+function ttsStop() {
+  // Remove speaking state from any button (handles stale lightbox buttons too)
+  document.querySelectorAll('.tts-btn.tts-speaking').forEach(b => b.classList.remove('tts-speaking'));
   if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
   if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+function speakWithPokedexEffect(name, btn) {
+  ttsStop();
   btn.classList.add('tts-speaking');
 
   const ctx = getAudioCtx(); // resume within gesture
@@ -362,25 +368,33 @@ function speakWithPokedexEffect(name, btn) {
   const audio = new Audio(url);
   ttsAudio = audio;
 
-  // Unlock the audio element within the user gesture (iOS Safari requirement).
-  // Calling play() here registers it as user-initiated; we immediately pause
-  // so it doesn't audibly play yet. After the beep, play() will work anywhere.
-  const unlock = audio.play();
-  if (unlock) unlock.then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+  // Bug fix: use volume=0 for the silent unlock play instead of play→pause.
+  // The play()→then(pause) pattern had a race condition on slow networks —
+  // the .then() could fire AFTER the 430ms setTimeout started real playback,
+  // causing the audio to be cut off mid-word.
+  audio.volume = 0;
+  audio.play().catch(() => {}); // unlock within gesture; errors are fine here
 
   schedulePokedexBeep(ctx); // synchronous — beeps play at scheduled times
 
+  // Safety timeout: if nothing ends/errors within 12s, remove speaking state.
+  // Prevents tts-speaking from getting stuck if both TTS and fallback fail silently.
+  const safetyTimer = setTimeout(() => btn.classList.remove('tts-speaking'), 12000);
+
+  const done = () => { btn.classList.remove('tts-speaking'); ttsAudio = null; clearTimeout(safetyTimer); };
+
   setTimeout(() => {
-    if (ttsAudio !== audio) return; // cancelled in the meantime
+    if (ttsAudio !== audio) { clearTimeout(safetyTimer); return; }
     audio.currentTime = 0;
-    audio.onended = () => { btn.classList.remove('tts-speaking'); ttsAudio = null; };
-    audio.onerror = () => { ttsAudio = null; speakFallback(name, btn); };
-    audio.play().catch(() => speakFallback(name, btn));
-  }, 430); // slightly after the 4th beep (~310ms) to avoid overlap
+    audio.volume = 1; // restore volume for real playback
+    audio.onended = done;
+    audio.onerror = () => { ttsAudio = null; speakFallback(name, btn, safetyTimer); };
+    audio.play().catch(() => speakFallback(name, btn, safetyTimer));
+  }, 430);
 }
 
-function speakFallback(name, btn) {
-  if (!window.speechSynthesis) { btn.classList.remove('tts-speaking'); return; }
+function speakFallback(name, btn, safetyTimer) {
+  if (!window.speechSynthesis) { btn.classList.remove('tts-speaking'); clearTimeout(safetyTimer); return; }
   const utt = new SpeechSynthesisUtterance(name);
   utt.pitch = 0.8;
   utt.rate = 0.88;
@@ -390,8 +404,9 @@ function speakFallback(name, btn) {
     || voices.find(v => /(enhanced|premium|daniel)/i.test(v.name))
     || voices.find(v => v.lang.startsWith('en'));
   if (preferred) utt.voice = preferred;
-  utt.onend  = () => btn.classList.remove('tts-speaking');
-  utt.onerror = () => btn.classList.remove('tts-speaking');
+  const done = () => { btn.classList.remove('tts-speaking'); clearTimeout(safetyTimer); };
+  utt.onend  = done;
+  utt.onerror = done;
   window.speechSynthesis.speak(utt);
 }
 
